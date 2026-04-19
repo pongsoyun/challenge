@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>📚 공부 챌린지</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -25,6 +30,18 @@
       min-height: 100vh;
       padding-bottom: 40px;
     }
+
+    /* ── Sync status ── */
+    #syncBadge {
+      position: fixed; top: 10px; right: 12px;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px;
+      background: #eee; color: #999;
+      transition: all .3s; z-index: 999;
+    }
+    #syncBadge.ok { background: var(--green-light); color: #2da56a; }
+    #syncBadge.err { background: var(--pink-light); color: var(--pink); }
+    #syncBadge.saving { background: #fff8e1; color: #e6a817; }
 
     /* ── Header ── */
     .header {
@@ -148,21 +165,11 @@
     }
     .row-result.done { background: var(--green-light); color: #2da56a; }
     .row-result.fail { background: var(--pink-light); color: var(--pink); }
-
-    /* ── Total banner ── */
-    .total-banner {
-      margin: 16px 16px 8px;
-      background: linear-gradient(135deg, #ff9eb5, #ff6b95);
-      border-radius: 18px;
-      padding: 16px 20px;
-      color: white;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .total-banner .label { font-size: 13px; font-weight: 700; opacity: .9; }
-    .total-banner .amount { font-size: 26px; font-weight: 900; }
   </style>
 </head>
 <body>
+
+<div id="syncBadge">연결 중…</div>
 
 <div class="header">
   <h1>📚 공부 챌린지</h1>
@@ -171,7 +178,7 @@
 
 <div class="participants">
   <div class="p-card">
-    <div class="avatar-wrap" id="av_soyun">
+    <div class="avatar-wrap">
       <img src="soyun.png" onerror="this.parentElement.innerHTML='🐹'" alt="소윤">
     </div>
     <div class="p-name">소윤</div>
@@ -181,7 +188,7 @@
     <div class="weeks-done" id="wd_soyun">0주 완료</div>
   </div>
   <div class="p-card">
-    <div class="avatar-wrap" id="av_seung">
+    <div class="avatar-wrap">
       <img src="seung.png" onerror="this.parentElement.innerHTML='🐰'" alt="승">
     </div>
     <div class="p-name">승</div>
@@ -196,8 +203,22 @@
 <div id="weeksContainer"></div>
 
 <script>
+// ── Firebase init ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain: "japanese-challenge.firebaseapp.com",
+  projectId: "japanese-challenge",
+  storageBucket: "japanese-challenge.firebasestorage.app",
+  messagingSenderId: "731920970316",
+  appId: "1:731920970316:web:f29acf68702da716c6bae9"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const docRef = db.collection('challenge').doc('data');
+
+// ── Constants ──────────────────────────────────────────────
 const WEEKS = 18;
-const START = new Date('2026-04-20T00:00:00'); // 첫 번째 월요일
+const START = new Date('2026-04-20T00:00:00');
 const DAYS = ['월','화','수','목','금','토','일'];
 const BASE = 10000, REWARD = 5000, GOAL = 100000;
 const PERSONS = ['soyun','seung'];
@@ -205,175 +226,102 @@ const ICONS = { soyun: '🐹', seung: '🐰' };
 const NAMES = { soyun: '소윤', seung: '승' };
 
 let state = {};
+let isSaving = false;
+const badge = document.getElementById('syncBadge');
 
-function loadState() {
-  try { state = JSON.parse(localStorage.getItem('challenge2') || '{}'); } catch(e) { state = {}; }
+// ── State helpers ──────────────────────────────────────────
+function initState() {
   PERSONS.forEach(p => {
     if (!state[p]) state[p] = [];
     while (state[p].length < WEEKS) state[p].push(Array(7).fill(false));
     state[p] = state[p].map(w => {
+      if (!Array.isArray(w)) w = Array(7).fill(false);
       while (w.length < 7) w.push(false);
       return w;
     });
   });
 }
 
-function save() { localStorage.setItem('challenge2', JSON.stringify(state)); }
+// Firestore doesn't support nested arrays → serialize as JSON string
+function toFirestore(s) { return { json: JSON.stringify(s) }; }
+function fromFirestore(d) {
+  try { return JSON.parse(d.json || '{}'); } catch(e) { return {}; }
+}
 
+// ── Save ───────────────────────────────────────────────────
+function save() {
+  badge.textContent = '저장 중…'; badge.className = 'saving';
+  docRef.set(toFirestore(state))
+    .then(() => { badge.textContent = '✓ 저장됨'; badge.className = 'ok'; })
+    .catch(e => {
+      console.error(e);
+      badge.textContent = '⚠ 저장 실패'; badge.className = 'err';
+    });
+}
+
+// ── Real-time listener ─────────────────────────────────────
+docRef.onSnapshot(snap => {
+  badge.textContent = '● 실시간 연결'; badge.className = 'ok';
+  if (snap.exists) {
+    const incoming = fromFirestore(snap.data());
+    // Merge: keep incoming data
+    state = incoming;
+  }
+  initState();
+  renderWeeksFinal();
+  updateAll();
+}, err => {
+  console.error('Firestore onSnapshot error:', err);
+  badge.textContent = '⚠ 오프라인'; badge.className = 'err';
+  // Fallback to localStorage
+  try { state = JSON.parse(localStorage.getItem('challenge2') || '{}'); } catch(e) { state = {}; }
+  initState();
+  renderWeeksFinal();
+  updateAll();
+});
+
+// ── Toggle ─────────────────────────────────────────────────
+function toggle(p, wi, di) {
+  state[p][wi][di] = !state[p][wi][di];
+  updateAll();
+  save();
+}
+
+// ── Date utils ─────────────────────────────────────────────
 function weekStart(wi) {
   const d = new Date(START); d.setDate(d.getDate() + wi * 7); return d;
 }
-
 function fmtDate(d) { return `${d.getMonth()+1}/${d.getDate()}`; }
-
 function today0() { const t = new Date(); t.setHours(0,0,0,0); return t; }
-
 function isFuture(d) { return d > today0(); }
-
 function isToday(d) {
   const t = new Date();
   return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
 }
 
-function toggle(p, wi, di) {
-  state[p][wi][di] = !state[p][wi][di];
-  save(); updateAll();
-}
-
+// ── Calculations ───────────────────────────────────────────
 function countChecked(p, wi) { return state[p][wi].filter(Boolean).length; }
+function cnt(p, wi) { return countChecked(p, wi) >= 5; }
 
 function calcSavings(p) {
   let s = BASE;
   for (let w = 0; w < WEEKS; w++) if (countChecked(p, w) >= 5) s += REWARD;
   return s;
 }
-
 function countDoneWeeks(p) {
   let n = 0;
   for (let w = 0; w < WEEKS; w++) if (countChecked(p, w) >= 5) n++;
   return n;
 }
 
+// ── Render icon ────────────────────────────────────────────
 function renderIcon(p) {
   return `<div class="p-icon">
     <img src="${p}.png" onerror="this.parentElement.innerHTML='${ICONS[p]}'" alt="${NAMES[p]}">
   </div>`;
 }
 
-function renderWeeks() {
-  const t0 = today0();
-  let html = '';
-
-  for (let wi = 0; wi < WEEKS; wi++) {
-    const ws = weekStart(wi);
-    const we = new Date(ws); we.setDate(we.getDate() + 6);
-    const isCurrentWeek = ws <= t0 && t0 <= we;
-    const isFutureWeek = ws > t0;
-
-    // day labels row
-    let dlHtml = '<div></div>';
-    for (let di = 0; di < 7; di++) {
-      const d = new Date(ws); d.setDate(d.getDate() + di);
-      const cls = isToday(d) ? 'today-col' : di===5 ? 'sat' : di===6 ? 'sun' : '';
-      dlHtml += `<div class="dl ${cls}">${DAYS[di]}</div>`;
-    }
-
-    // person rows
-    let rowsHtml = '';
-    PERSONS.forEach(p => {
-      const cnt = countChecked(p, wi);
-      const weekOver = we < t0;
-      let resCls = '', resTxt = `${cnt}/5`;
-      if (cnt >= 5) { resCls = 'done'; resTxt = '+₩5,000'; }
-      else if (weekOver) { resCls = 'fail'; resTxt = `${cnt}/5 ✗`; }
-
-      let daysHtml = renderIcon(p);
-      for (let di = 0; di < 7; di++) {
-        const d = new Date(ws); d.setDate(d.getDate() + di);
-        const checked = state[p][wi][di];
-        const tod = isToday(d);
-        const fut = isFuture(d);
-        const cls = ['day-btn', checked?'checked':'', tod?'today-col':''].filter(Boolean).join(' ');
-        const onclick = fut ? '' : `onclick="toggle('${p}',${wi},${di})"`;
-        const style = fut ? 'style="cursor:default;opacity:.35"' : '';
-        daysHtml += `<button class="${cls}" ${onclick} ${style}>${checked?'✓':''}</button>`;
-      }
-      daysHtml += `<div class="row-result ${resCls}">${resTxt}</div>`;
-      rowsHtml += `<div class="person-row" id="row_${p}_${wi}">${daysHtml}</div>`;
-    });
-
-    const cardCls = ['week-card',
-      isFutureWeek ? 'future' : '',
-      isCurrentWeek ? 'current' : '',
-      !isFutureWeek && countChecked('soyun',wi)>=5 && countChecked('seung',wi)>=5 ? 'both-done' : ''
-    ].filter(Boolean).join(' ');
-
-    html += `<div class="${cardCls}" id="wk_${wi}">
-      <div class="week-header">
-        <span class="week-num">Week ${wi+1}</span>
-        <span class="week-date">${fmtDate(ws)} ~ ${fmtDate(we)}</span>
-      </div>
-      <div class="day-labels">${dlHtml}</div>
-      ${rowsHtml}
-    </div>`;
-  }
-
-  document.getElementById('weeksContainer').innerHTML = html;
-}
-
-function updateAll() {
-  PERSONS.forEach(p => {
-    const s = calcSavings(p);
-    const pct = Math.round(s / GOAL * 100);
-    const dw = countDoneWeeks(p);
-    document.getElementById(`sav_${p}`).textContent = '₩' + s.toLocaleString();
-    document.getElementById(`prog_${p}`).style.width = pct + '%';
-    document.getElementById(`pct_${p}`).textContent = pct + '% 달성';
-    document.getElementById(`wd_${p}`).textContent = `${dw}주 완료`;
-  });
-
-  // Update buttons & results
-  const t0 = today0();
-  for (let wi = 0; wi < WEEKS; wi++) {
-    const ws = weekStart(wi);
-    const we = new Date(ws); we.setDate(we.getDate() + 6);
-    const weekOver = we < t0;
-
-    PERSONS.forEach(p => {
-      const cnt = countChecked(p, wi);
-      for (let di = 0; di < 7; di++) {
-        const btn = document.getElementById(`btn_${p}_${wi}_${di}`);
-        if (btn) {
-          const checked = state[p][wi][di];
-          btn.className = ['day-btn', checked?'checked':'', btn.classList.contains('today-col')?'today-col':''].filter(Boolean).join(' ');
-          btn.textContent = checked ? '✓' : '';
-        }
-      }
-      const res = document.getElementById(`res_${p}_${wi}`);
-      if (res) {
-        if (cnt >= 5) { res.className='row-result done'; res.textContent='+₩5,000'; }
-        else if (weekOver) { res.className='row-result fail'; res.textContent=`${cnt}/5 ✗`; }
-        else { res.className='row-result'; res.textContent=`${cnt}/5`; }
-      }
-    });
-
-    // week card class
-    const card = document.getElementById(`wk_${wi}`);
-    if (card) {
-      const isCurrentWeek = ws <= t0 && t0 <= we;
-      const isFutureWeek = ws > t0;
-      card.className = ['week-card',
-        isFutureWeek ? 'future' : '',
-        isCurrentWeek ? 'current' : '',
-        !isFutureWeek && cnt('soyun',wi) && cnt('seung',wi) ? 'both-done' : ''
-      ].filter(Boolean).join(' ');
-    }
-  }
-}
-
-function cnt(p, wi) { return countChecked(p, wi) >= 5; }
-
-// ID 방식 업데이트를 위해 renderWeeks에 id 추가
+// ── Render weeks ───────────────────────────────────────────
 function renderWeeksFinal() {
   const t0 = today0();
   let html = '';
@@ -434,9 +382,56 @@ function renderWeeksFinal() {
   document.getElementById('weeksContainer').innerHTML = html;
 }
 
-loadState();
-renderWeeksFinal();
-updateAll();
+// ── Update summary cards ───────────────────────────────────
+function updateAll() {
+  PERSONS.forEach(p => {
+    const s = calcSavings(p);
+    const pct = Math.round(s / GOAL * 100);
+    const dw = countDoneWeeks(p);
+    document.getElementById(`sav_${p}`).textContent = '₩' + s.toLocaleString();
+    document.getElementById(`prog_${p}`).style.width = pct + '%';
+    document.getElementById(`pct_${p}`).textContent = pct + '% 달성';
+    document.getElementById(`wd_${p}`).textContent = `${dw}주 완료`;
+  });
+
+  const t0 = today0();
+  for (let wi = 0; wi < WEEKS; wi++) {
+    const ws = weekStart(wi);
+    const we = new Date(ws); we.setDate(we.getDate() + 6);
+    const weekOver = we < t0;
+
+    PERSONS.forEach(p => {
+      const c = countChecked(p, wi);
+      for (let di = 0; di < 7; di++) {
+        const btn = document.getElementById(`btn_${p}_${wi}_${di}`);
+        if (btn) {
+          const checked = state[p][wi][di];
+          const todCls = btn.classList.contains('today-col') ? 'today-col' : '';
+          btn.className = ['day-btn', checked?'checked':'', todCls].filter(Boolean).join(' ');
+          btn.textContent = checked ? '✓' : '';
+        }
+      }
+      const res = document.getElementById(`res_${p}_${wi}`);
+      if (res) {
+        if (c >= 5) { res.className='row-result done'; res.textContent='+₩5,000'; }
+        else if (weekOver) { res.className='row-result fail'; res.textContent=`${c}/5 ✗`; }
+        else { res.className='row-result'; res.textContent=`${c}/5`; }
+      }
+    });
+
+    const card = document.getElementById(`wk_${wi}`);
+    if (card) {
+      const isCurrentWeek = ws <= t0 && t0 <= we;
+      const isFutureWeek = ws > t0;
+      const both = !isFutureWeek && cnt('soyun',wi) && cnt('seung',wi);
+      card.className = ['week-card',
+        isFutureWeek ? 'future' : '',
+        isCurrentWeek ? 'current' : '',
+        both ? 'both-done' : ''
+      ].filter(Boolean).join(' ');
+    }
+  }
+}
 </script>
 </body>
 </html>
