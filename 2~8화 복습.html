@@ -73,6 +73,8 @@ h1{font-size:1.05rem;font-weight:700;margin-bottom:8px}
 .wrong-btn{flex:1;padding:12px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
 .empty{text-align:center;padding:60px 20px;color:#aaa;font-size:.9rem}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -272,8 +274,24 @@ let state = {};
 let statusFilter = 'all';
 let epFilter = 'all';
 
+// ── Firebase ────────────────────────────────────────────────
+const _fbApp5 = firebase.initializeApp({
+  apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain:"japanese-challenge.firebaseapp.com",
+  databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"japanese-challenge",
+  storageBucket:"japanese-challenge.firebasestorage.app",
+  messagingSenderId:"731920970316",
+  appId:"1:731920970316:web:f29acf68702da716c6bae9"
+},'quiz5');
+const _db5 = firebase.database(_fbApp5);
+const _ref5 = _db5.ref('quiz/jpvocab');
+
 function loadState(){ try{ state = JSON.parse(localStorage.getItem('jpvocab')||'{}'); }catch(e){ state={}; } }
-function saveState(){ localStorage.setItem('jpvocab', JSON.stringify(state)); }
+function saveState(){
+  _ref5.set(state).catch(()=>{});
+  localStorage.setItem('jpvocab', JSON.stringify(state));
+}
 
 // ── TTS ───────────────────────────────────────────────────────────
 let currentAudio = null;
@@ -494,8 +512,11 @@ function resetAll(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
-loadState();
-render();
+loadState(); render(); // initial render from localStorage
+_ref5.on('value', snap=>{
+  const d=snap.val();
+  if(d){ state=d; render(); }
+}, ()=>{});
 </script>
 </body>
 </html>

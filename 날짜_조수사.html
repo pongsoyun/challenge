@@ -62,6 +62,8 @@
 
   .empty{text-align:center;padding:60px 20px;color:#bbb;font-size:.9rem}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -173,11 +175,27 @@ let activeCat = '전체';
 let activeStatus = '전체';
 let currentAudio = null;
 
+// ── Firebase ────────────────────────────────────────────────
+const _fbApp3 = firebase.initializeApp({
+  apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain:"japanese-challenge.firebaseapp.com",
+  databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"japanese-challenge",
+  storageBucket:"japanese-challenge.firebasestorage.app",
+  messagingSenderId:"731920970316",
+  appId:"1:731920970316:web:f29acf68702da716c6bae9"
+},'quiz3');
+const _db3 = firebase.database(_fbApp3);
+const _ref3 = _db3.ref('quiz/jpCounter');
+
 function loadState(){
   try{ state = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'); }
   catch(e){ state = {}; }
 }
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function saveState(){
+  _ref3.set(state).catch(()=>{});
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
 
 // ─── CHOICE GENERATION ────────────────────────────────────────────────────────
 function seededRand(seed){ return ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; }
@@ -386,8 +404,11 @@ function resetAll(){
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-loadState();
-render();
+loadState(); render(); // initial render from localStorage
+_ref3.on('value', snap=>{
+  const d=snap.val();
+  if(d){ state=d; render(); }
+}, ()=>{});
 </script>
 </body>
 </html>

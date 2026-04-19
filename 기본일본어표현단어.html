@@ -87,6 +87,8 @@
     font-size: 14px;
   }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -166,23 +168,57 @@
 </table>
 
 <script>
+  // ── Firebase ────────────────────────────────────────────
+  const _fbApp2 = firebase.initializeApp({
+    apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+    authDomain:"japanese-challenge.firebaseapp.com",
+    databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"japanese-challenge",
+    storageBucket:"japanese-challenge.firebasestorage.app",
+    messagingSenderId:"731920970316",
+    appId:"1:731920970316:web:f29acf68702da716c6bae9"
+  },'quiz2');
+  const _db2 = firebase.database(_fbApp2);
+  const _ref2 = _db2.ref('quiz/word_status');
+
+  let wordState = {};
+
+  function applyState() {
+    document.querySelectorAll('tr[data-id]').forEach(row => {
+      const id = row.dataset.id;
+      const checked = !!wordState[id];
+      row.classList.toggle('done', checked);
+      row.querySelector('input[type="checkbox"]').checked = checked;
+    });
+  }
+
   function toggle(cb) {
     const row = cb.closest('tr');
     const id = row.dataset.id;
     if (cb.checked) {
       row.classList.add('done');
-      localStorage.setItem('word_' + id, '1');
+      wordState[id] = true;
     } else {
       row.classList.remove('done');
-      localStorage.removeItem('word_' + id);
+      delete wordState[id];
     }
+    _ref2.set(wordState).catch(()=>{});
+    localStorage.setItem('word_status', JSON.stringify(wordState));
   }
-  document.querySelectorAll('tr[data-id]').forEach(row => {
-    const id = row.dataset.id;
-    if (localStorage.getItem('word_' + id)) {
-      row.classList.add('done');
-      row.querySelector('input[type="checkbox"]').checked = true;
-    }
+
+  // Load from Firebase (fallback: localStorage)
+  try {
+    const ls = JSON.parse(localStorage.getItem('word_status') || '{}');
+    wordState = ls; applyState();
+  } catch(e) {}
+
+  _ref2.on('value', snap => {
+    const d = snap.val();
+    if (d) wordState = d;
+    applyState();
+  }, () => {
+    try { wordState = JSON.parse(localStorage.getItem('word_status') || '{}'); } catch(e) {}
+    applyState();
   });
 </script>
 

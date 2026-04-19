@@ -78,6 +78,8 @@
     .btn-secondary { flex: 1; padding: 13px; border: 1.5px solid var(--border); border-radius: 11px; background: var(--card); font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text); }
     .btn-primary { flex: 2; padding: 13px; border: none; border-radius: 11px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 <div class="header">
@@ -247,9 +249,34 @@ const DATA = [
   {id:179,cat:'shop',jp:'よろしくお願いします',rd:'よろしくおねがいします',kr:'잘 부탁드립니다'},
 ];
 const CAT_LABEL={basic:'🛫 기본 / 공항 (1~40)',transport:'🚃 교통 / 길찾기 (41~70)',food:'🍜 음식점 (91~116)',shop:'👕 쇼핑 / 패션 (141~180)'};
+// ── Firebase ────────────────────────────────────────────────
+const _fbApp = firebase.initializeApp({
+  apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain:"japanese-challenge.firebaseapp.com",
+  databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"japanese-challenge",
+  storageBucket:"japanese-challenge.firebasestorage.app",
+  messagingSenderId:"731920970316",
+  appId:"1:731920970316:web:f29acf68702da716c6bae9"
+},'quiz1');
+const _db1 = firebase.database(_fbApp);
+const _ref1 = _db1.ref('quiz/jp_status');
+
 let mode=1,currentCat='all',reviewMode=false,revealAll=false,statuses={};
-(function(){try{statuses=JSON.parse(localStorage.getItem('jp_status')||'{}');}catch(e){}})();
-function save(){localStorage.setItem('jp_status',JSON.stringify(statuses));}
+function save(){
+  _ref1.set(statuses).catch(()=>{});
+  localStorage.setItem('jp_status',JSON.stringify(statuses));
+}
+// initial load from Firebase (fallback: localStorage)
+try{statuses=JSON.parse(localStorage.getItem('jp_status')||'{}');}catch(e){}
+_ref1.on('value', snap=>{
+  const d=snap.val();
+  if(d) statuses=d;
+  render();
+}, ()=>{
+  try{statuses=JSON.parse(localStorage.getItem('jp_status')||'{}');}catch(e){}
+  render();
+});
 let activeTTSEl=null,jpVoice=null;
 function loadVoice(){const v=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('ja'));if(!v.length)return;for(const kw of['o-ren','premium','enhanced','kyoko','hattori']){const f=v.find(x=>x.name.toLowerCase().includes(kw));if(f){jpVoice=f;return;}}jpVoice=v[0];}
 speechSynthesis.onvoiceschanged=loadVoice;loadVoice();
@@ -264,7 +291,7 @@ function setCat(cat,btn){currentCat=cat;document.querySelectorAll('.filter-btn:n
 function toggleReview(btn){reviewMode=!reviewMode;btn.classList.toggle('active',reviewMode);render();}
 function toggleRevealAll(){revealAll=!revealAll;document.querySelectorAll('.answer').forEach(a=>a.classList.toggle('show',revealAll));document.querySelectorAll('.reveal-btn').forEach(btn=>{btn.textContent=revealAll?(mode===1?'답 닫기 ▴':'뜻 닫기 ▴'):(mode===1?'답 보기 ▾':'뜻 보기 ▾');});document.getElementById('revealAllBtn').textContent=revealAll?'전체 답 숨기기':'전체 답 보기';}
 function resetAll(){if(!confirm('모든 O/X 기록을 초기화할까요?'))return;statuses={};save();render();}
-render();
+// render() is called by Firebase onValue listener above
 </script>
 </body>
 </html>

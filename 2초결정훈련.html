@@ -71,6 +71,8 @@ h1{font-size:1.1rem;font-weight:700;margin-bottom:8px;letter-spacing:-.3px}
 .tts-btn.playing{animation:pulse .6s infinite alternate}
 @keyframes pulse{from{opacity:1}to{opacity:.4}}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -263,10 +265,24 @@ const TOTAL = Q.length;
 let state = {};
 let currentFilter = 'all';
 
+// ── Firebase ────────────────────────────────────────────────
+const _fbApp4 = firebase.initializeApp({
+  apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain:"japanese-challenge.firebaseapp.com",
+  databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"japanese-challenge",
+  storageBucket:"japanese-challenge.firebasestorage.app",
+  messagingSenderId:"731920970316",
+  appId:"1:731920970316:web:f29acf68702da716c6bae9"
+},'quiz4');
+const _db4 = firebase.database(_fbApp4);
+const _ref4 = _db4.ref('quiz/jp2sec');
+
 function loadState(){
   try{ state = JSON.parse(localStorage.getItem('jp2sec')||'{}'); }catch(e){ state={}; }
 }
 function saveState(){
+  _ref4.set(state).catch(()=>{});
   localStorage.setItem('jp2sec', JSON.stringify(state));
 }
 
@@ -492,8 +508,11 @@ function resetAll(){
 }
 
 // ── INIT ─────────────────────────────────────────────────────────
-loadState();
-render();
+loadState(); render(); // initial render from localStorage
+_ref4.on('value', snap=>{
+  const d=snap.val();
+  if(d){ state=d; render(); }
+}, ()=>{});
 </script>
 </body>
 </html>
