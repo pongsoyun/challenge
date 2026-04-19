@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>일본어 날짜·조수사 훈련</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#fdf6ee;color:#333;min-height:100vh}
+  header{background:#e8946a;color:#fff;padding:14px 16px;text-align:center;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  header h1{font-size:1.1rem;font-weight:700}
+  .progress-bar-wrap{background:rgba(255,255,255,.3);border-radius:99px;height:6px;margin-top:8px}
+  .progress-bar{height:6px;border-radius:99px;background:#fff;transition:width .4s}
+  .progress-label{font-size:.75rem;margin-top:4px;opacity:.9}
+
+  .filters{display:flex;flex-wrap:wrap;gap:6px;padding:12px 12px 6px;justify-content:center}
+  .filter-btn{border:none;border-radius:20px;padding:6px 14px;font-size:.8rem;cursor:pointer;font-weight:600;background:#ffe5d0;color:#c0603a;transition:all .15s}
+  .filter-btn.active{background:#e8946a;color:#fff}
+
+  .status-filters{display:flex;gap:6px;padding:0 12px 12px;justify-content:center;flex-wrap:wrap}
+  .status-btn{border:none;border-radius:20px;padding:5px 12px;font-size:.75rem;cursor:pointer;background:#f0e0d0;color:#888;font-weight:600}
+  .status-btn.active{background:#c0603a;color:#fff}
+
+  .stats{display:flex;gap:8px;padding:0 12px 10px;justify-content:center;font-size:.8rem;color:#888}
+  .stats span{background:#fff;padding:4px 10px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .stats span b{color:#e8946a}
+
+  .card-list{padding:0 12px 80px;display:flex;flex-direction:column;gap:10px}
+
+  .card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.07);border:2px solid transparent;transition:border-color .2s}
+  .card.correct{border-color:#4caf50}
+  .card.wrong{border-color:#f44336}
+  .card.mastered{opacity:.6}
+
+  .card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .card-num{font-size:.7rem;color:#bbb;min-width:24px}
+  .card-cat{font-size:.7rem;background:#ffe5d0;color:#c0603a;padding:2px 8px;border-radius:10px;font-weight:600}
+  .master-btn{margin-left:auto;font-size:1.1rem;background:none;border:none;cursor:pointer;padding:2px 4px}
+
+  .card-word{font-size:1.5rem;font-weight:700;text-align:center;padding:8px 0 4px;color:#333}
+  .card-word-sub{font-size:.8rem;text-align:center;color:#999;margin-bottom:12px}
+
+  .choices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .choice-btn{border:2px solid #eee;background:#fafafa;border-radius:10px;padding:10px 4px;font-size:1rem;font-weight:700;cursor:pointer;color:#444;transition:all .15s;line-height:1.3;text-align:center}
+  .choice-btn:active{transform:scale(.97)}
+  .choice-btn.correct-ans{background:#e8f5e9;border-color:#4caf50;color:#2e7d32}
+  .choice-btn.wrong-ans{background:#ffebee;border-color:#f44336;color:#c62828}
+  .choice-btn.show-correct{background:#e8f5e9;border-color:#4caf50;color:#2e7d32}
+  .choice-btn:disabled{cursor:default}
+  .choice-reading{font-size:.7rem;display:block;color:#888;font-weight:400;margin-top:2px}
+
+  .answer-area{display:none;margin-top:12px;padding-top:10px;border-top:1px solid #f0e0d0}
+  .answer-area.show{display:block}
+  .answer-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .answer-ja{font-size:1.1rem;font-weight:700;color:#333}
+  .answer-kr{font-size:.85rem;color:#888}
+  .tts-btn{border:none;background:#ffe5d0;border-radius:50%;width:30px;height:30px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .tts-btn.playing{background:#e8946a;color:#fff}
+
+  .reset-wrap{text-align:center;padding:12px}
+  .reset-btn{border:none;background:#eee;border-radius:20px;padding:8px 20px;font-size:.85rem;color:#666;cursor:pointer}
+
+  .empty{text-align:center;padding:60px 20px;color:#bbb;font-size:.9rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🗓 날짜 · 조수사 일본어 훈련</h1>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="progBar"></div></div>
+  <div class="progress-label" id="progLabel">0 / 0 완료</div>
+</header>
+
+<div class="filters" id="catFilters"></div>
+<div class="status-filters" id="statusFilters"></div>
+<div class="stats" id="stats"></div>
+<div class="card-list" id="cardList"></div>
+<div class="reset-wrap"><button class="reset-btn" onclick="resetAll()">🔄 처음부터</button></div>
+
+<script>
+// ─── VOCAB DATA ───────────────────────────────────────────────────────────────
+const VOCAB = [
+  // 병 (本)
+  {id:1, cat:'병(本)', kr:'1병', ja:'一本', reading:'いっぽん'},
+  {id:2, cat:'병(本)', kr:'2병', ja:'二本', reading:'にほん'},
+  {id:3, cat:'병(本)', kr:'3병', ja:'三本', reading:'さんぼん'},
+  {id:4, cat:'병(本)', kr:'4병', ja:'四本', reading:'よんほん'},
+  {id:5, cat:'병(本)', kr:'5병', ja:'五本', reading:'ごほん'},
+  {id:6, cat:'병(本)', kr:'6병', ja:'六本', reading:'ろっぽん'},
+  {id:7, cat:'병(本)', kr:'7병', ja:'七本', reading:'ななほん'},
+  {id:8, cat:'병(本)', kr:'8병', ja:'八本', reading:'はっぽん'},
+  {id:9, cat:'병(本)', kr:'9병', ja:'九本', reading:'きゅうほん'},
+  {id:10, cat:'병(本)', kr:'10병', ja:'十本', reading:'じゅっぽん'},
+
+  // 잔 (杯)
+  {id:11, cat:'잔(杯)', kr:'1잔', ja:'一杯', reading:'いっぱい'},
+  {id:12, cat:'잔(杯)', kr:'2잔', ja:'二杯', reading:'にはい'},
+  {id:13, cat:'잔(杯)', kr:'3잔', ja:'三杯', reading:'さんばい'},
+  {id:14, cat:'잔(杯)', kr:'4잔', ja:'四杯', reading:'よんはい'},
+  {id:15, cat:'잔(杯)', kr:'5잔', ja:'五杯', reading:'ごはい'},
+  {id:16, cat:'잔(杯)', kr:'6잔', ja:'六杯', reading:'ろっぱい'},
+  {id:17, cat:'잔(杯)', kr:'7잔', ja:'七杯', reading:'ななはい'},
+  {id:18, cat:'잔(杯)', kr:'8잔', ja:'八杯', reading:'はっぱい'},
+  {id:19, cat:'잔(杯)', kr:'9잔', ja:'九杯', reading:'きゅうはい'},
+  {id:20, cat:'잔(杯)', kr:'10잔', ja:'十杯', reading:'じゅっぱい'},
+
+  // 월 (月)
+  {id:21, cat:'월(月)', kr:'1월', ja:'一月', reading:'いちがつ'},
+  {id:22, cat:'월(月)', kr:'2월', ja:'二月', reading:'にがつ'},
+  {id:23, cat:'월(月)', kr:'3월', ja:'三月', reading:'さんがつ'},
+  {id:24, cat:'월(月)', kr:'4월', ja:'四月', reading:'しがつ'},
+  {id:25, cat:'월(月)', kr:'5월', ja:'五月', reading:'ごがつ'},
+  {id:26, cat:'월(月)', kr:'6월', ja:'六月', reading:'ろくがつ'},
+  {id:27, cat:'월(月)', kr:'7월', ja:'七月', reading:'しちがつ'},
+  {id:28, cat:'월(月)', kr:'8월', ja:'八月', reading:'はちがつ'},
+  {id:29, cat:'월(月)', kr:'9월', ja:'九月', reading:'くがつ'},
+  {id:30, cat:'월(月)', kr:'10월', ja:'十月', reading:'じゅうがつ'},
+  {id:31, cat:'월(月)', kr:'11월', ja:'十一月', reading:'じゅういちがつ'},
+  {id:32, cat:'월(月)', kr:'12월', ja:'十二月', reading:'じゅうにがつ'},
+
+  // 일 (日)
+  {id:33, cat:'일(日)', kr:'1일', ja:'一日', reading:'ついたち'},
+  {id:34, cat:'일(日)', kr:'2일', ja:'二日', reading:'ふつか'},
+  {id:35, cat:'일(日)', kr:'3일', ja:'三日', reading:'みっか'},
+  {id:36, cat:'일(日)', kr:'4일', ja:'四日', reading:'よっか'},
+  {id:37, cat:'일(日)', kr:'5일', ja:'五日', reading:'いつか'},
+  {id:38, cat:'일(日)', kr:'6일', ja:'六日', reading:'むいか'},
+  {id:39, cat:'일(日)', kr:'7일', ja:'七日', reading:'なのか'},
+  {id:40, cat:'일(日)', kr:'8일', ja:'八日', reading:'ようか'},
+  {id:41, cat:'일(日)', kr:'9일', ja:'九日', reading:'ここのか'},
+  {id:42, cat:'일(日)', kr:'10일', ja:'十日', reading:'とおか'},
+  {id:43, cat:'일(日)', kr:'11일', ja:'十一日', reading:'じゅういちにち'},
+  {id:44, cat:'일(日)', kr:'12일', ja:'十二日', reading:'じゅうににち'},
+  {id:45, cat:'일(日)', kr:'13일', ja:'十三日', reading:'じゅうさんにち'},
+  {id:46, cat:'일(日)', kr:'14일', ja:'十四日', reading:'じゅうよっか'},
+  {id:47, cat:'일(日)', kr:'15일', ja:'十五日', reading:'じゅうごにち'},
+  {id:48, cat:'일(日)', kr:'16일', ja:'十六日', reading:'じゅうろくにち'},
+  {id:49, cat:'일(日)', kr:'17일', ja:'十七日', reading:'じゅうしちにち'},
+  {id:50, cat:'일(日)', kr:'18일', ja:'十八日', reading:'じゅうはちにち'},
+  {id:51, cat:'일(日)', kr:'19일', ja:'十九日', reading:'じゅうくにち'},
+  {id:52, cat:'일(日)', kr:'20일', ja:'二十日', reading:'はつか'},
+  {id:53, cat:'일(日)', kr:'21일', ja:'二十一日', reading:'にじゅういちにち'},
+  {id:54, cat:'일(日)', kr:'22일', ja:'二十二日', reading:'にじゅうににち'},
+  {id:55, cat:'일(日)', kr:'23일', ja:'二十三日', reading:'にじゅうさんにち'},
+  {id:56, cat:'일(日)', kr:'24일', ja:'二十四日', reading:'にじゅうよっか'},
+  {id:57, cat:'일(日)', kr:'25일', ja:'二十五日', reading:'にじゅうごにち'},
+  {id:58, cat:'일(日)', kr:'26일', ja:'二十六日', reading:'にじゅうろくにち'},
+  {id:59, cat:'일(日)', kr:'27일', ja:'二十七日', reading:'にじゅうしちにち'},
+  {id:60, cat:'일(日)', kr:'28일', ja:'二十八日', reading:'にじゅうはちにち'},
+  {id:61, cat:'일(日)', kr:'29일', ja:'二十九日', reading:'にじゅうくにち'},
+  {id:62, cat:'일(日)', kr:'30일', ja:'三十日', reading:'さんじゅうにち'},
+  {id:63, cat:'일(日)', kr:'31일', ja:'三十一日', reading:'さんじゅういちにち'},
+
+  // 기타
+  {id:64, cat:'기타', kr:'이번달', ja:'今月', reading:'こんげつ'},
+  {id:65, cat:'기타', kr:'다음달', ja:'来月', reading:'らいげつ'},
+  {id:66, cat:'기타', kr:'지난달', ja:'先月', reading:'せんげつ'},
+  {id:67, cat:'기타', kr:'하루 (기간)', ja:'一日', reading:'いちにち'},
+  {id:68, cat:'기타', kr:'이틀 (기간)', ja:'二日間', reading:'ふつかかん'},
+  {id:69, cat:'기타', kr:'삼일 (기간)', ja:'三日間', reading:'みっかかん'},
+  {id:70, cat:'기타', kr:'오늘', ja:'今日', reading:'きょう'},
+  {id:71, cat:'기타', kr:'내일', ja:'明日', reading:'あした'},
+  {id:72, cat:'기타', kr:'어제', ja:'昨日', reading:'きのう'},
+  {id:73, cat:'기타', kr:'이번주', ja:'今週', reading:'こんしゅう'},
+  {id:74, cat:'기타', kr:'다음주', ja:'来週', reading:'らいしゅう'},
+  {id:75, cat:'기타', kr:'지난주', ja:'先週', reading:'せんしゅう'},
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'jpCounter';
+let state = {};
+let activeCat = '전체';
+let activeStatus = '전체';
+let currentAudio = null;
+
+function loadState(){
+  try{ state = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'); }
+  catch(e){ state = {}; }
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+// ─── CHOICE GENERATION ────────────────────────────────────────────────────────
+function seededRand(seed){ return ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; }
+
+function buildChoices(v){
+  // pool: same category first, then others
+  const sameCat = VOCAB.filter(x => x.id !== v.id && x.cat === v.cat);
+  const otherCat = VOCAB.filter(x => x.id !== v.id && x.cat !== v.cat);
+  let pool = sameCat.length >= 2 ? sameCat : [...sameCat, ...otherCat];
+
+  const s1 = Math.floor(seededRand(v.id * 7 + 3) * pool.length);
+  let s2 = Math.floor(seededRand(v.id * 13 + 5) * pool.length);
+  if(s2 === s1) s2 = (s2 + 1) % pool.length;
+
+  const choices = [
+    {reading: v.reading, ja: v.ja, correct: true},
+    {reading: pool[s1].reading, ja: pool[s1].ja, correct: false},
+    {reading: pool[s2].reading, ja: pool[s2].ja, correct: false},
+  ];
+
+  // seeded shuffle
+  let s = v.id;
+  for(let i = choices.length - 1; i > 0; i--){
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const j = s % (i + 1);
+    [choices[i], choices[j]] = [choices[j], choices[i]];
+  }
+  return choices;
+}
+
+// ─── TTS ──────────────────────────────────────────────────────────────────────
+function speak(text, btnEl){
+  if(currentAudio){ currentAudio.pause(); currentAudio = null; }
+  document.querySelectorAll('.tts-btn.playing').forEach(b => b.classList.remove('playing'));
+  if(btnEl) btnEl.classList.add('playing');
+  const url = 'https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=gtx&q=' + encodeURIComponent(text);
+  const audio = new Audio(url);
+  audio.playbackRate = 0.9;
+  currentAudio = audio;
+  audio.onended = () => { if(btnEl) btnEl.classList.remove('playing'); currentAudio = null; };
+  audio.onerror = () => {
+    if(btnEl) btnEl.classList.remove('playing');
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'ja-JP'; utt.rate = 0.85;
+    speechSynthesis.speak(utt);
+  };
+  audio.play().catch(() => audio.onerror && audio.onerror());
+}
+
+// ─── FILTER & RENDER ──────────────────────────────────────────────────────────
+const cats = ['전체', ...new Set(VOCAB.map(v => v.cat))];
+const statuses = ['전체', '미답변', '틀린것만', '맞은것', '완료(⭐)'];
+
+function getStatus(v){
+  const s = state[v.id];
+  if(!s) return 'none';
+  if(s.mastered) return 'mastered';
+  if(s.correct === true) return 'correct';
+  if(s.correct === false) return 'wrong';
+  return 'none';
+}
+
+function filteredVocab(){
+  return VOCAB.filter(v => {
+    const catOk = activeCat === '전체' || v.cat === activeCat;
+    const st = getStatus(v);
+    const statusOk =
+      activeStatus === '전체' ? true :
+      activeStatus === '미답변' ? st === 'none' :
+      activeStatus === '틀린것만' ? st === 'wrong' :
+      activeStatus === '맞은것' ? st === 'correct' :
+      activeStatus === '완료(⭐)' ? st === 'mastered' : true;
+    return catOk && statusOk;
+  });
+}
+
+function renderFilters(){
+  const cf = document.getElementById('catFilters');
+  cf.innerHTML = cats.map(c =>
+    `<button class="filter-btn${activeCat===c?' active':''}" onclick="setCat('${c}')">${c}</button>`
+  ).join('');
+  const sf = document.getElementById('statusFilters');
+  sf.innerHTML = statuses.map(s =>
+    `<button class="status-btn${activeStatus===s?' active':''}" onclick="setStatus('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setCat(c){ activeCat = c; render(); }
+function setStatus(s){ activeStatus = s; render(); }
+
+function renderStats(){
+  const total = VOCAB.length;
+  const done = VOCAB.filter(v => {const s=state[v.id]; return s&&(s.correct===true||s.mastered);}).length;
+  const wrong = VOCAB.filter(v => {const s=state[v.id]; return s&&s.correct===false&&!s.mastered;}).length;
+  const mastered = VOCAB.filter(v => {const s=state[v.id]; return s&&s.mastered;}).length;
+
+  document.getElementById('progBar').style.width = (done/total*100)+'%';
+  document.getElementById('progLabel').textContent = `${done} / ${total} 완료`;
+  document.getElementById('stats').innerHTML =
+    `<span>전체 <b>${total}</b></span><span>완료 <b>${done}</b></span><span>틀림 <b>${wrong}</b></span><span>⭐ <b>${mastered}</b></span>`;
+}
+
+function renderCards(){
+  const list = filteredVocab();
+  const el = document.getElementById('cardList');
+  if(!list.length){ el.innerHTML = '<div class="empty">해당하는 단어가 없습니다</div>'; return; }
+
+  el.innerHTML = list.map((v, idx) => {
+    const s = state[v.id] || {};
+    const choices = buildChoices(v);
+    const answered = s.correct !== undefined;
+    const statusCls = s.mastered ? ' mastered' : s.correct === true ? ' correct' : s.correct === false ? ' wrong' : '';
+
+    const choiceBtns = choices.map(c => {
+      let cls = '';
+      if(answered){
+        if(c.correct) cls = 'show-correct';
+        else if(!c.correct && s.chosenReading === c.reading) cls = 'wrong-ans';
+      }
+      return `<button class="choice-btn ${cls}" ${answered?'disabled':''} onclick="answer(${v.id},'${c.reading}',${c.correct},this)">
+        ${c.reading}<span class="choice-reading">${c.ja}</span>
+      </button>`;
+    }).join('');
+
+    const answerShow = answered ? ' show' : '';
+
+    return `<div class="card${statusCls}" id="card-${v.id}">
+      <div class="card-header">
+        <span class="card-num">${idx+1}</span>
+        <span class="card-cat">${v.cat}</span>
+        <button class="master-btn" onclick="toggleMaster(${v.id})">${s.mastered?'⭐':'☆'}</button>
+      </div>
+      <div class="card-word">${v.kr}</div>
+      <div class="card-word-sub">일본어 발음을 고르세요</div>
+      <div class="choices">${choiceBtns}</div>
+      <div class="answer-area${answerShow}" id="ans-${v.id}">
+        <div class="answer-row">
+          <button class="tts-btn" id="tts-${v.id}" onclick="speak('${v.reading}',this)">🔊</button>
+          <span class="answer-ja">${v.ja}（${v.reading}）</span>
+          <span class="answer-kr">${v.kr}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function render(){
+  renderFilters();
+  renderStats();
+  renderCards();
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+function answer(id, reading, isCorrect, btnEl){
+  const v = VOCAB.find(x => x.id === id);
+  if(!v) return;
+  state[id] = { correct: isCorrect, chosenReading: reading, mastered: state[id]?.mastered || false };
+  saveState();
+
+  const card = document.getElementById('card-'+id);
+  if(card){
+    card.classList.remove('correct','wrong');
+    card.classList.add(isCorrect ? 'correct' : 'wrong');
+    card.querySelectorAll('.choice-btn').forEach(b => {
+      b.disabled = true;
+      const r = b.textContent.trim().split('\n')[0].trim();
+    });
+    // highlight choices
+    card.querySelectorAll('.choice-btn').forEach(b => {
+      const bReading = b.querySelector('.choice-reading')?.previousSibling?.textContent?.trim();
+    });
+    // re-render choices properly
+    const choices = buildChoices(v);
+    card.querySelectorAll('.choice-btn').forEach((b, i) => {
+      const c = choices[i];
+      b.disabled = true;
+      if(c.correct) b.className = 'choice-btn show-correct';
+      else if(c.reading === reading && !isCorrect) b.className = 'choice-btn wrong-ans';
+      else b.className = 'choice-btn';
+    });
+
+    const ansEl = document.getElementById('ans-'+id);
+    if(ansEl) ansEl.classList.add('show');
+  }
+
+  setTimeout(() => {
+    const btn = document.getElementById('tts-'+id);
+    if(btn) speak(v.reading, btn);
+  }, 300);
+
+  renderStats();
+}
+
+function toggleMaster(id){
+  if(!state[id]) state[id] = { correct: undefined, mastered: false };
+  state[id].mastered = !state[id].mastered;
+  saveState();
+  render();
+}
+
+function resetAll(){
+  if(!confirm('모든 진행 상태를 초기화할까요?')) return;
+  state = {};
+  saveState();
+  render();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadState();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>⚡ 2초 결정 훈련 🇯🇵</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic','Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+
+/* HEADER */
+header{background:#1a1a2e;color:#fff;padding:14px 16px 10px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+h1{font-size:1.1rem;font-weight:700;margin-bottom:8px;letter-spacing:-.3px}
+.progress-bar{height:5px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.progress-fill{height:100%;background:#4ade80;border-radius:3px;transition:width .4s ease}
+.stats{display:flex;gap:10px;font-size:.72rem;color:rgba(255,255,255,.7)}
+
+/* FILTER */
+.filter-bar{display:flex;gap:6px;padding:10px 16px;background:#fff;border-bottom:1px solid #e8eaf0;overflow-x:auto;position:sticky;top:72px;z-index:199;-ms-overflow-style:none;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.f-btn{padding:6px 14px;border:1.5px solid #dde0e8;border-radius:20px;background:#fff;font-size:.78rem;color:#555;cursor:pointer;white-space:nowrap;font-weight:500;transition:all .15s}
+.f-btn.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
+
+/* CATEGORY LABEL */
+.cat-label{font-size:.7rem;font-weight:700;color:#6c757d;text-transform:uppercase;letter-spacing:.5px;padding:16px 16px 6px;display:none}
+.cat-label.show{display:block}
+
+/* CARDS */
+.cards{padding:8px 16px 80px;display:flex;flex-direction:column;gap:10px}
+.card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #e0e4ed;transition:border-color .2s,opacity .2s}
+.card.answered-correct{border-left-color:#4ade80}
+.card.answered-wrong{border-left-color:#f87171}
+.card.mastered{opacity:.45}
+.card.hidden{display:none}
+
+/* CARD HEADER */
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+.num{font-size:.7rem;color:#aaa;min-width:24px;font-weight:600}
+.sit{font-size:.98rem;font-weight:700;flex:1;line-height:1.3}
+.chk{width:24px;height:24px;border:2px solid #dde0e8;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0;font-size:13px}
+.chk.on{background:#4ade80;border-color:#4ade80;color:#fff}
+
+/* CHOICES */
+.choices{display:flex;gap:7px;flex-wrap:wrap}
+.c-btn{flex:1;min-width:90px;padding:11px 6px;border:2px solid #e0e4ed;border-radius:10px;background:#fafbff;font-size:.88rem;cursor:pointer;text-align:center;line-height:1.4;transition:all .15s;font-family:inherit;font-weight:500;word-break:break-all}
+.c-btn:active{transform:scale(.96)}
+.c-btn.s-correct{background:#dcfce7;border-color:#4ade80;color:#166534}
+.c-btn.s-wrong{background:#fee2e2;border-color:#f87171;color:#991b1b}
+.c-btn.show-ans{background:#dcfce7;border-color:#4ade80;color:#166534}
+.c-btn.disabled{pointer-events:none;opacity:.6}
+
+/* ANSWER BOX */
+.ans-box{margin-top:10px;padding:11px 12px;background:#f8f9ff;border-radius:9px;display:none;animation:fadeIn .2s ease}
+.ans-box.show{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.ans-word{font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:3px}
+.ans-hint{font-size:.8rem;color:#5a5f7d;margin-bottom:5px;line-height:1.4}
+.ans-ex{font-size:.9rem;color:#1a1a2e;font-weight:600}
+
+/* BOTTOM BAR */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:1px solid #e8eaf0;display:flex;gap:8px;z-index:199}
+.reset-btn{flex:1;padding:12px;background:#f0f2f5;color:#555;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
+.wrong-btn{flex:1;padding:12px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:60px 20px;color:#aaa;font-size:.9rem}
+
+/* TTS */
+.tts-btn{background:none;border:none;font-size:1.2rem;cursor:pointer;padding:2px 4px;border-radius:6px;transition:transform .15s;vertical-align:middle;line-height:1}
+.tts-btn:active{transform:scale(.85)}
+.tts-btn.playing{animation:pulse .6s infinite alternate}
+@keyframes pulse{from{opacity:1}to{opacity:.4}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ 2초 결정 훈련 🇯🇵</h1>
+  <div class="progress-bar"><div class="progress-fill" id="pFill" style="width:0%"></div></div>
+  <div class="stats">
+    <span id="sTot">0/110</span>
+    <span id="sOk">✅ 0</span>
+    <span id="sNg">❌ 0</span>
+    <span id="sMt">⭐ 0</span>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <button class="f-btn active" onclick="setFilter('all',this)">전체</button>
+  <button class="f-btn" onclick="setFilter('unanswered',this)">미답변</button>
+  <button class="f-btn" onclick="setFilter('wrong',this)">틀린것만 ❌</button>
+  <button class="f-btn" onclick="setFilter('correct',this)">맞은것 ✅</button>
+  <button class="f-btn" onclick="setFilter('mastered',this)">완료 ⭐</button>
+</div>
+
+<div class="cards" id="cards"></div>
+
+<div class="bottom-bar">
+  <button class="reset-btn" onclick="resetAll()">🔄 초기화</button>
+  <button class="wrong-btn" onclick="showWrongOnly()">❌ 틀린것만</button>
+</div>
+
+<script>
+const Q = [
+  // ── 1~30 기본형 ──────────────────────────────────────────────
+  {n:1,cat:'🔤 기본형',sit:'스티커가 들떠 있음',c:['剥(は)がれる','流(なが)れる'],a:0,h:'표면에서 떨어지는 건 "벗겨지다" 사용',ex:'シールが剥(は)がれそう'},
+  {n:2,cat:'🔤 기본형',sit:'강물이 흐름',c:['剥(は)がれる','流(なが)れる'],a:1,h:'물이나 시간은 "흐르다" 사용',ex:'川(かわ)が流(なが)れてる'},
+  {n:3,cat:'🔤 기본형',sit:'친구가 이쪽으로 옴',c:['来(く)る','送(おく)る'],a:0,h:'내 쪽으로 이동하면 来る',ex:'友達(ともだち)が来(く)るよ'},
+  {n:4,cat:'🔤 기본형',sit:'사진을 보냄',c:['来(く)る','送(おく)る'],a:1,h:'상대에게 전달하면 送る',ex:'写真(しゃしん)を送(おく)るね'},
+  {n:5,cat:'🔤 기본형',sit:'상자를 엶',c:['開(あ)ける','開(ひら)く'],a:0,h:'물건을 여는 건 開ける',ex:'箱(はこ)を開(あ)ける'},
+  {n:6,cat:'🔤 기본형',sit:'꽃이 핌',c:['開(あ)ける','開(ひら)く'],a:1,h:'자연스럽게 펴지는 건 開く',ex:'花(はな)が開(ひら)いた'},
+  {n:7,cat:'🔤 기본형',sit:'배고픔',c:['ぺこぺこ','わくわく'],a:0,h:'배고픔 표현',ex:'お腹(なか)ぺこぺこ'},
+  {n:8,cat:'🔤 기본형',sit:'기대됨',c:['ぺこぺこ','わくわく'],a:1,h:'기대·설렘 표현',ex:'わくわくする！'},
+  {n:9,cat:'🔤 기본형',sit:'긴장',c:['どきどき','ふわふわ'],a:0,h:'심장 뛰는 느낌',ex:'どきどきする'},
+  {n:10,cat:'🔤 기본형',sit:'폭신함',c:['どきどき','ふわふわ'],a:1,h:'촉감이 부드러움',ex:'このパンふわふわ'},
+  {n:11,cat:'🔤 기본형',sit:'살짝 놓음',c:['そっと','ぱっと'],a:0,h:'조심스럽게 행동',ex:'そっと置(お)く'},
+  {n:12,cat:'🔤 기본형',sit:'빠르게 봄',c:['そっと','ぱっと'],a:1,h:'순간적으로 빠르게',ex:'ぱっと見(み)る'},
+  {n:13,cat:'🔤 기본형',sit:'계속 응시',c:['じーっと','ぐるぐる'],a:0,h:'가만히 계속 봄',ex:'じーっと見(み)る'},
+  {n:14,cat:'🔤 기본형',sit:'어지러움',c:['じーっと','ぐるぐる'],a:1,h:'빙빙 도는 느낌',ex:'頭(あたま)ぐるぐる'},
+  {n:15,cat:'🔤 기본형',sit:'동의 요청',c:['ね','よ'],a:0,h:'공감·동의 유도',ex:'おいしいね'},
+  {n:16,cat:'🔤 기본형',sit:'정보 전달',c:['ね','よ'],a:1,h:'새로운 정보 전달',ex:'本当(ほんとう)だよ'},
+  {n:17,cat:'🔤 기본형',sit:'이미 아는 사실',c:['じゃん','よ'],a:0,h:'상대도 아는 정보',ex:'それ知(し)ってるじゃん'},
+  {n:18,cat:'🔤 기본형',sit:'새 정보',c:['じゃん','よ'],a:1,h:'처음 알려주는 내용',ex:'これ安(やす)いよ'},
+  {n:19,cat:'🔤 기본형',sit:'같이 가자 (제안)',c:['行(い)こう','行(い)く'],a:0,h:'함께 하자는 제안',ex:'行(い)こう！'},
+  {n:20,cat:'🔤 기본형',sit:'그냥 간다',c:['行(い)こう','行(い)く'],a:1,h:'단순한 사실 설명',ex:'今(いま)行(い)く'},
+  {n:21,cat:'🔤 기본형',sit:'같이 먹자 (권유)',c:['食(た)べよう','食(た)べる'],a:0,h:'권유·제안',ex:'一緒(いっしょ)に食(た)べよう'},
+  {n:22,cat:'🔤 기본형',sit:'먹는다 (사실)',c:['食(た)べよう','食(た)べる'],a:1,h:'단순 행동',ex:'今(いま)食(た)べる'},
+  {n:23,cat:'🔤 기본형',sit:'떨어질 것 같음',c:['落(お)ちそう','落(お)ちるよ'],a:0,h:'아직 안 일어남 (추측)',ex:'落(お)ちそう！'},
+  {n:24,cat:'🔤 기본형',sit:'확실히 떨어짐',c:['落(お)ちそう','落(お)ちるよ'],a:1,h:'확신/경고',ex:'落(お)ちるよ！'},
+  {n:25,cat:'🔤 기본형',sit:'맛있어 보임',c:['おいしい','おいしそう'],a:1,h:'보기만 한 상태',ex:'おいしそう！'},
+  {n:26,cat:'🔤 기본형',sit:'실제 맛있음',c:['おいしい','おいしそう'],a:0,h:'먹어보고 판단',ex:'おいしいよ'},
+  {n:27,cat:'🔤 기본형',sit:'가까움',c:['近(ちか)い','遠(とお)い'],a:0,h:'거리 짧음',ex:'駅(えき)近(ちか)い'},
+  {n:28,cat:'🔤 기본형',sit:'멂',c:['近(ちか)い','遠(とお)い'],a:1,h:'거리 김',ex:'空港(くうこう)遠(とお)い'},
+  {n:29,cat:'🔤 기본형',sit:'위험 (물리적)',c:['危(あぶ)ない','怖(こわ)い'],a:0,h:'물리적 위험',ex:'危(あぶ)ないよ'},
+  {n:30,cat:'🔤 기본형',sit:'무서움 (감정)',c:['危(あぶ)ない','怖(こわ)い'],a:1,h:'감정적 공포',ex:'怖(こわ)いね'},
+
+  // ── 31~50 そう vs よ ──────────────────────────────────────────
+  {n:31,cat:'📌 そう vs よ',sit:'지금 떨어질 것 같음',c:['そう','よ'],a:0,h:'추측·예상 = そう (아직 안 일어남)',ex:'落(お)ちそう'},
+  {n:32,cat:'📌 そう vs よ',sit:'이미 떨어짐',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'落(お)ちたよ'},
+  {n:33,cat:'📌 そう vs よ',sit:'위험해 보임',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'危(あぶ)なそう'},
+  {n:34,cat:'📌 そう vs よ',sit:'확정 사실',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'本当(ほんとう)だよ'},
+  {n:35,cat:'📌 そう vs よ',sit:'느낌만 있음',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'痛(いた)そう'},
+  {n:36,cat:'📌 そう vs よ',sit:'이미 아픔',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'痛(いた)いよ'},
+  {n:37,cat:'📌 そう vs よ',sit:'곧 일어날 듯',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'降(ふ)りそう'},
+  {n:38,cat:'📌 そう vs よ',sit:'이미 일어남',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'降(ふ)ったよ'},
+  {n:39,cat:'📌 そう vs よ',sit:'불안 느낌',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'やばそう'},
+  {n:40,cat:'📌 そう vs よ',sit:'확신 전달',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'大丈夫(だいじょうぶ)だよ'},
+  {n:41,cat:'📌 そう vs よ',sit:'예상',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'来(き)そう'},
+  {n:42,cat:'📌 そう vs よ',sit:'실제',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'来(き)たよ'},
+  {n:43,cat:'📌 そう vs よ',sit:'보기만 한 상태',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'おいしそう'},
+  {n:44,cat:'📌 そう vs よ',sit:'먹어봄',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'おいしいよ'},
+  {n:45,cat:'📌 そう vs よ',sit:'추측',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'壊(こわ)れそう'},
+  {n:46,cat:'📌 そう vs よ',sit:'사실',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'壊(こわ)れたよ'},
+  {n:47,cat:'📌 そう vs よ',sit:'느낌',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'寒(さむ)そう'},
+  {n:48,cat:'📌 そう vs よ',sit:'확인',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'寒(さむ)いよ'},
+  {n:49,cat:'📌 そう vs よ',sit:'위험 (느낌)',c:['そう','よ'],a:0,h:'추측·예상 = そう',ex:'落(お)ちそう'},
+  {n:50,cat:'📌 そう vs よ',sit:'사실 (경고)',c:['そう','よ'],a:1,h:'사실 전달 = よ',ex:'落(お)ちるよ'},
+
+  // ── 51~70 じゃん / よ / ね ────────────────────────────────────
+  {n:51,cat:'💬 じゃん·よ·ね',sit:'이미 아는 사실',c:['じゃん','よ','ね'],a:0,h:'상대도 이미 아는 사실 = じゃん',ex:'それ知(し)ってるじゃん'},
+  {n:52,cat:'💬 じゃん·よ·ね',sit:'정보 전달',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'これ新(あたら)しいよ'},
+  {n:53,cat:'💬 じゃん·よ·ね',sit:'동의 요청',c:['じゃん','よ','ね'],a:2,h:'동의·공감 요청 = ね',ex:'おいしいね'},
+  {n:54,cat:'💬 じゃん·よ·ね',sit:'강조',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'本当(ほんとう)だよ'},
+  {n:55,cat:'💬 じゃん·よ·ね',sit:'공유 정보 (이미 말한)',c:['じゃん','よ','ね'],a:0,h:'상대도 이미 아는 사실 = じゃん',ex:'昨日(きのう)言(い)ったじゃん'},
+  {n:56,cat:'💬 じゃん·よ·ね',sit:'확신',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'いいよ'},
+  {n:57,cat:'💬 じゃん·よ·ね',sit:'공감',c:['じゃん','よ','ね'],a:2,h:'동의·공감 요청 = ね',ex:'楽(たの)しいね'},
+  {n:58,cat:'💬 じゃん·よ·ね',sit:'설득',c:['じゃん','よ','ね'],a:0,h:'상대도 아는 사실로 설득 = じゃん',ex:'いいじゃん'},
+  {n:59,cat:'💬 じゃん·よ·ね',sit:'설명',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'そうだよ'},
+  {n:60,cat:'💬 じゃん·よ·ね',sit:'감정 공유',c:['じゃん','よ','ね'],a:2,h:'동의·공감 요청 = ね',ex:'かわいいね'},
+  {n:61,cat:'💬 じゃん·よ·ね',sit:'이미 아는거',c:['じゃん','よ','ね'],a:0,h:'상대도 이미 아는 사실 = じゃん',ex:'前(まえ)言(い)ったじゃん'},
+  {n:62,cat:'💬 じゃん·よ·ね',sit:'새 정보',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'これ安(やす)いよ'},
+  {n:63,cat:'💬 じゃん·よ·ね',sit:'동의',c:['じゃん','よ','ね'],a:2,h:'동의·공감 요청 = ね',ex:'いいね'},
+  {n:64,cat:'💬 じゃん·よ·ね',sit:'강조 (정정)',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'違(ちが)うよ'},
+  {n:65,cat:'💬 じゃん·よ·ね',sit:'공유 (같은 거)',c:['じゃん','よ','ね'],a:0,h:'상대도 이미 아는 사실 = じゃん',ex:'同(おな)じじゃん'},
+  {n:66,cat:'💬 じゃん·よ·ね',sit:'설명',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'簡単(かんたん)だよ'},
+  {n:67,cat:'💬 じゃん·よ·ね',sit:'공감',c:['じゃん','よ','ね'],a:2,h:'동의·공감 요청 = ね',ex:'そうだね'},
+  {n:68,cat:'💬 じゃん·よ·ね',sit:'설득',c:['じゃん','よ','ね'],a:0,h:'상대도 아는 사실로 설득 = じゃん',ex:'やろうじゃん'},
+  {n:69,cat:'💬 じゃん·よ·ね',sit:'전달',c:['じゃん','よ','ね'],a:1,h:'새로운 정보 전달 = よ',ex:'行(い)くよ'},
+  {n:70,cat:'💬 じゃん·よ·ね',sit:'공감',c:['じゃん','よ','ね'],a:2,h:'동의·공감 요청 = ね',ex:'いい天気(てんき)だね'},
+
+  // ── 71~90 동사 의도 ───────────────────────────────────────────
+  {n:71,cat:'🎯 동사 의도',sit:'같이 가자',c:['行(い)こう','行(い)く'],a:0,h:'제안·권유 = 〜よう',ex:'行(い)こう'},
+  {n:72,cat:'🎯 동사 의도',sit:'혼자 간다',c:['行(い)こう','行(い)く'],a:1,h:'단순 사실·행동 = 〜る',ex:'行(い)く'},
+  {n:73,cat:'🎯 동사 의도',sit:'같이 먹자',c:['食(た)べよう','食(た)べる'],a:0,h:'제안·권유 = 〜よう',ex:'食(た)べよう'},
+  {n:74,cat:'🎯 동사 의도',sit:'먹는다',c:['食(た)べよう','食(た)べる'],a:1,h:'단순 사실·행동 = 〜る',ex:'食(た)べる'},
+  {n:75,cat:'🎯 동사 의도',sit:'제안',c:['しようか','する'],a:0,h:'제안·권유 = 〜ようか',ex:'やろうか'},
+  {n:76,cat:'🎯 동사 의도',sit:'행동',c:['しようか','する'],a:1,h:'단순 사실·행동 = する',ex:'やる'},
+  {n:77,cat:'🎯 동사 의도',sit:'같이 보자',c:['見(み)よう','見(み)る'],a:0,h:'제안·권유 = 〜よう',ex:'見(み)よう'},
+  {n:78,cat:'🎯 동사 의도',sit:'본다',c:['見(み)よう','見(み)る'],a:1,h:'단순 사실·행동 = 〜る',ex:'見(み)る'},
+  {n:79,cat:'🎯 동사 의도',sit:'권유',c:['やろう','やる'],a:0,h:'제안·권유 = 〜よう',ex:'やろう'},
+  {n:80,cat:'🎯 동사 의도',sit:'사실',c:['やろう','やる'],a:1,h:'단순 사실·행동 = やる',ex:'やる'},
+  {n:81,cat:'🎯 동사 의도',sit:'제안',c:['行(い)こう','行(い)く'],a:0,h:'제안·권유 = 〜よう',ex:'行(い)こう'},
+  {n:82,cat:'🎯 동사 의도',sit:'단순',c:['行(い)こう','行(い)く'],a:1,h:'단순 사실·행동 = 〜る',ex:'行(い)く'},
+  {n:83,cat:'🎯 동사 의도',sit:'권유',c:['食(た)べよう','食(た)べる'],a:0,h:'제안·권유 = 〜よう',ex:'食(た)べよう'},
+  {n:84,cat:'🎯 동사 의도',sit:'설명',c:['食(た)べよう','食(た)べる'],a:1,h:'단순 사실·행동 = 〜る',ex:'食(た)べる'},
+  {n:85,cat:'🎯 동사 의도',sit:'제안',c:['しようか','する'],a:0,h:'제안·권유 = 〜ようか',ex:'行(い)こうか'},
+  {n:86,cat:'🎯 동사 의도',sit:'행동',c:['しようか','する'],a:1,h:'단순 사실·행동 = する',ex:'する'},
+  {n:87,cat:'🎯 동사 의도',sit:'같이',c:['見(み)よう','見(み)る'],a:0,h:'제안·권유 = 〜よう',ex:'見(み)よう'},
+  {n:88,cat:'🎯 동사 의도',sit:'현재',c:['見(み)よう','見(み)る'],a:1,h:'단순 사실·행동 = 〜る',ex:'見(み)る'},
+  {n:89,cat:'🎯 동사 의도',sit:'권유',c:['やろう','やる'],a:0,h:'제안·권유 = 〜よう',ex:'やろう'},
+  {n:90,cat:'🎯 동사 의도',sit:'설명',c:['やろう','やる'],a:1,h:'단순 사실·행동 = やる',ex:'やる'},
+
+  // ── 91~110 감정·의성어 ────────────────────────────────────────
+  {n:91,cat:'💫 감정·의성어',sit:'배고픔',c:['ぺこぺこ','わくわく'],a:0,h:'배가 고픈 느낌',ex:'お腹(なか)ぺこぺこ'},
+  {n:92,cat:'💫 감정·의성어',sit:'기대',c:['ぺこぺこ','わくわく'],a:1,h:'기대·설렘 표현',ex:'わくわくする'},
+  {n:93,cat:'💫 감정·의성어',sit:'긴장',c:['どきどき','ふわふわ'],a:0,h:'심장이 두근두근',ex:'どきどきする'},
+  {n:94,cat:'💫 감정·의성어',sit:'부드러움',c:['どきどき','ふわふわ'],a:1,h:'폭신폭신 부드러운 느낌',ex:'ふわふわ'},
+  {n:95,cat:'💫 감정·의성어',sit:'조심',c:['そっと','ぱっと'],a:0,h:'조심스럽게 살며시',ex:'そっと置(お)く'},
+  {n:96,cat:'💫 감정·의성어',sit:'빠름',c:['そっと','ぱっと'],a:1,h:'순간적으로 빠르게',ex:'ぱっと見(み)る'},
+  {n:97,cat:'💫 감정·의성어',sit:'계속 봄',c:['じーっと','ぐるぐる'],a:0,h:'가만히 집중해서 봄',ex:'じーっと見(み)る'},
+  {n:98,cat:'💫 감정·의성어',sit:'어지러움',c:['じーっと','ぐるぐる'],a:1,h:'빙빙 도는 느낌',ex:'ぐるぐる'},
+  {n:99,cat:'💫 감정·의성어',sit:'잠깐',c:['ちょっと','もう'],a:0,h:'잠깐·조금 = ちょっと',ex:'ちょっと待(ま)って'},
+  {n:100,cat:'💫 감정·의성어',sit:'끝 (그만)',c:['ちょっと','もう'],a:1,h:'이제 됐다·그만 = もう',ex:'もういい'},
+  {n:101,cat:'💫 감정·의성어',sit:'배고픔',c:['ぺこぺこ','わくわく'],a:0,h:'배가 고픈 느낌',ex:'ぺこぺこ'},
+  {n:102,cat:'💫 감정·의성어',sit:'기대',c:['ぺこぺこ','わくわく'],a:1,h:'기대·설렘 표현',ex:'わくわく'},
+  {n:103,cat:'💫 감정·의성어',sit:'긴장',c:['どきどき','ふわふわ'],a:0,h:'심장이 두근두근',ex:'どきどき'},
+  {n:104,cat:'💫 감정·의성어',sit:'부드러움',c:['どきどき','ふわふわ'],a:1,h:'폭신폭신 부드러운 느낌',ex:'ふわふわ'},
+  {n:105,cat:'💫 감정·의성어',sit:'조용',c:['そっと','ぱっと'],a:0,h:'조심스럽게 살며시',ex:'そっと'},
+  {n:106,cat:'💫 감정·의성어',sit:'순간',c:['そっと','ぱっと'],a:1,h:'순간적으로 빠르게',ex:'ぱっと'},
+  {n:107,cat:'💫 감정·의성어',sit:'집중',c:['じーっと','ぐるぐる'],a:0,h:'가만히 집중해서 봄',ex:'じーっと'},
+  {n:108,cat:'💫 감정·의성어',sit:'혼란',c:['じーっと','ぐるぐる'],a:1,h:'빙빙 도는 느낌',ex:'ぐるぐる'},
+  {n:109,cat:'💫 감정·의성어',sit:'잠깐',c:['ちょっと','もう'],a:0,h:'잠깐·조금 = ちょっと',ex:'ちょっと'},
+  {n:110,cat:'💫 감정·의성어',sit:'끝 (그만)',c:['ちょっと','もう'],a:1,h:'이제 됐다·그만 = もう',ex:'もう'},
+];
+
+// ── TTS ──────────────────────────────────────────────────────────
+let currentAudio = null;
+
+function stripFurigana(text){
+  return text.replace(/\([ぁ-んァ-ン]+\)/g, '');
+}
+
+function speak(rawText, btnEl){
+  const text = stripFurigana(rawText);
+
+  // stop previous
+  if(currentAudio){
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  document.querySelectorAll('.tts-btn.playing').forEach(b => b.classList.remove('playing'));
+
+  if(btnEl) btnEl.classList.add('playing');
+
+  // Google Translate TTS (자연스러운 목소리)
+  const url = 'https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=gtx&q=' + encodeURIComponent(text);
+  const audio = new Audio(url);
+  audio.playbackRate = 0.95;
+  currentAudio = audio;
+  audio.onended = () => { if(btnEl) btnEl.classList.remove('playing'); currentAudio = null; };
+  audio.onerror = () => {
+    // fallback: Web Speech API
+    if(btnEl) btnEl.classList.remove('playing');
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'ja-JP'; utt.rate = 0.85;
+    speechSynthesis.speak(utt);
+  };
+  audio.play().catch(() => audio.onerror());
+}
+
+// ── STATE ────────────────────────────────────────────────────────
+const TOTAL = Q.length;
+let state = {};
+let currentFilter = 'all';
+
+function loadState(){
+  try{ state = JSON.parse(localStorage.getItem('jp2sec')||'{}'); }catch(e){ state={}; }
+}
+function saveState(){
+  localStorage.setItem('jp2sec', JSON.stringify(state));
+}
+
+// ── RENDER ───────────────────────────────────────────────────────
+function render(){
+  const wrap = document.getElementById('cards');
+  wrap.innerHTML = '';
+
+  let lastCat = null;
+  let visibleCount = 0;
+
+  Q.forEach(q => {
+    const s = state[q.n] || {};
+    const isAnswered = s.pick !== undefined;
+    const isCorrect = isAnswered && s.pick === q.a;
+    const isWrong = isAnswered && s.pick !== q.a;
+    const isMastered = !!s.mastered;
+
+    let show = true;
+    if(currentFilter === 'unanswered') show = !isAnswered;
+    else if(currentFilter === 'wrong') show = isWrong;
+    else if(currentFilter === 'correct') show = isCorrect;
+    else if(currentFilter === 'mastered') show = isMastered;
+
+    if(!show) return;
+    visibleCount++;
+
+    // category label
+    if(q.cat !== lastCat){
+      const lbl = document.createElement('div');
+      lbl.className = 'cat-label show';
+      lbl.textContent = q.cat;
+      wrap.appendChild(lbl);
+      lastCat = q.cat;
+    }
+
+    // card
+    const card = document.createElement('div');
+    card.className = 'card' +
+      (isMastered ? ' mastered' : '') +
+      (isCorrect ? ' answered-correct' : '') +
+      (isWrong ? ' answered-wrong' : '');
+    card.id = 'card-' + q.n;
+
+    // top row
+    const top = document.createElement('div');
+    top.className = 'card-top';
+
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = q.n;
+
+    const sit = document.createElement('span');
+    sit.className = 'sit';
+    sit.textContent = q.sit;
+
+    const chk = document.createElement('div');
+    chk.className = 'chk' + (isMastered ? ' on' : '');
+    chk.textContent = isMastered ? '⭐' : '';
+    chk.onclick = () => toggleMaster(q.n);
+
+    top.appendChild(num);
+    top.appendChild(sit);
+    top.appendChild(chk);
+
+    // choices
+    const choices = document.createElement('div');
+    choices.className = 'choices';
+
+    q.c.forEach((label, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'c-btn';
+      btn.textContent = label;
+
+      if(isAnswered){
+        btn.classList.add('disabled');
+        if(i === q.a) btn.classList.add('show-ans');
+        if(i === s.pick && s.pick !== q.a) btn.classList.add('s-wrong');
+      } else {
+        btn.onclick = () => answer(q.n, i);
+      }
+      choices.appendChild(btn);
+    });
+
+    // answer box
+    const ansBox = document.createElement('div');
+    ansBox.className = 'ans-box' + (isAnswered ? ' show' : '');
+    if(isAnswered){
+      const emoji = isCorrect ? '✅' : '❌';
+      const word = document.createElement('div');
+      word.className = 'ans-word';
+      word.textContent = emoji + ' ' + q.c[q.a];
+      const hint = document.createElement('div');
+      hint.className = 'ans-hint';
+      hint.textContent = '👉 ' + q.h;
+      const exRow = document.createElement('div');
+      exRow.style.display = 'flex';
+      exRow.style.alignItems = 'center';
+      exRow.style.gap = '6px';
+      const ex = document.createElement('span');
+      ex.className = 'ans-ex';
+      ex.textContent = '예) ' + q.ex;
+      const ttsBtn = document.createElement('button');
+      ttsBtn.className = 'tts-btn';
+      ttsBtn.textContent = '🔊';
+      ttsBtn.title = '소리 듣기';
+      ttsBtn.onclick = (e) => { e.stopPropagation(); speak(q.ex, ttsBtn); };
+      exRow.appendChild(ex);
+      exRow.appendChild(ttsBtn);
+      ansBox.appendChild(word);
+      ansBox.appendChild(hint);
+      ansBox.appendChild(exRow);
+    }
+
+    card.appendChild(top);
+    card.appendChild(choices);
+    card.appendChild(ansBox);
+    wrap.appendChild(card);
+  });
+
+  if(visibleCount === 0){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = '해당하는 문제가 없습니다 😊';
+    wrap.appendChild(empty);
+  }
+
+  updateStats();
+}
+
+// ── ANSWER ───────────────────────────────────────────────────────
+function answer(n, pick){
+  if(!state[n]) state[n] = {};
+  state[n].pick = pick;
+  saveState();
+
+  const q = Q.find(x => x.n === n);
+  const card = document.getElementById('card-' + n);
+  const isCorrect = pick === q.a;
+
+  card.className = 'card ' + (isCorrect ? 'answered-correct' : 'answered-wrong');
+
+  // update buttons
+  const btns = card.querySelectorAll('.c-btn');
+  btns.forEach((b,i) => {
+    b.classList.add('disabled');
+    if(i === q.a) b.classList.add('show-ans');
+    if(i === pick && pick !== q.a) b.classList.add('s-wrong');
+    b.onclick = null;
+  });
+
+  // show answer box
+  const ansBox = card.querySelector('.ans-box');
+  const emoji = isCorrect ? '✅' : '❌';
+  ansBox.innerHTML =
+    '<div class="ans-word">'+emoji+' '+q.c[q.a]+'</div>'+
+    '<div class="ans-hint">👉 '+q.h+'</div>'+
+    '<div style="display:flex;align-items:center;gap:6px">'+
+      '<span class="ans-ex">예) '+q.ex+'</span>'+
+      '<button class="tts-btn" id="tts-'+q.n+'" title="소리 듣기">🔊</button>'+
+    '</div>';
+  ansBox.classList.add('show');
+
+  // auto-play after short delay
+  setTimeout(() => {
+    const btn = document.getElementById('tts-'+q.n);
+    if(btn) speak(q.ex, btn);
+  }, 300);
+  // wire up button
+  const ttsBtn = document.getElementById('tts-'+q.n);
+  if(ttsBtn) ttsBtn.onclick = (e) => { e.stopPropagation(); speak(q.ex, ttsBtn); };
+
+  updateStats();
+}
+
+// ── MASTER TOGGLE ────────────────────────────────────────────────
+function toggleMaster(n){
+  if(!state[n]) state[n] = {};
+  state[n].mastered = !state[n].mastered;
+  saveState();
+  render();
+}
+
+// ── FILTER ───────────────────────────────────────────────────────
+function setFilter(f, btn){
+  currentFilter = f;
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  render();
+}
+
+function showWrongOnly(){
+  currentFilter = 'wrong';
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+  render();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── STATS ────────────────────────────────────────────────────────
+function updateStats(){
+  let answered=0, correct=0, wrong=0, mastered=0;
+  Q.forEach(q => {
+    const s = state[q.n]||{};
+    if(s.pick !== undefined){ answered++; (s.pick===q.a ? correct++ : wrong++); }
+    if(s.mastered) mastered++;
+  });
+  document.getElementById('sTot').textContent = answered+'/'+TOTAL;
+  document.getElementById('sOk').textContent = '✅ '+correct;
+  document.getElementById('sNg').textContent = '❌ '+wrong;
+  document.getElementById('sMt').textContent = '⭐ '+mastered;
+  document.getElementById('pFill').style.width = (answered/TOTAL*100).toFixed(1)+'%';
+}
+
+// ── RESET ────────────────────────────────────────────────────────
+function resetAll(){
+  if(!confirm('전체 초기화하시겠어요?')) return;
+  state = {};
+  saveState();
+  currentFilter = 'all';
+  document.querySelectorAll('.f-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  render();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+loadState();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>🇯🇵 단어 훈련</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+ruby{ruby-align:center}
+rt{font-size:0.55em;color:#888;letter-spacing:0}
+
+/* HEADER */
+header{background:#1a1a2e;color:#fff;padding:14px 16px 10px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+h1{font-size:1.05rem;font-weight:700;margin-bottom:8px}
+.progress-bar{height:5px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.progress-fill{height:100%;background:#4ade80;border-radius:3px;transition:width .4s}
+.stats{display:flex;gap:10px;font-size:.72rem;color:rgba(255,255,255,.7)}
+
+/* FILTER BARS */
+.filter-wrap{background:#fff;border-bottom:1px solid #e8eaf0;position:sticky;top:68px;z-index:199}
+.filter-bar{display:flex;gap:6px;padding:8px 16px;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-bar+.filter-bar{padding-top:0;padding-bottom:10px;border-top:1px dashed #f0f2f5}
+.f-btn{padding:6px 13px;border:1.5px solid #dde0e8;border-radius:20px;background:#fff;font-size:.75rem;color:#555;cursor:pointer;white-space:nowrap;font-weight:500;transition:all .15s;font-family:inherit}
+.f-btn.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
+.f-btn.ep-active{background:#6366f1;color:#fff;border-color:#6366f1}
+
+/* CARDS */
+.cards{padding:10px 16px 80px;display:flex;flex-direction:column;gap:10px}
+
+/* EP LABEL */
+.ep-label{font-size:.68rem;font-weight:700;color:#6c757d;letter-spacing:.3px;padding:14px 0 4px}
+
+/* CARD */
+.card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:4px solid #e0e4ed;transition:border-color .2s,opacity .2s}
+.card.answered-correct{border-left-color:#4ade80}
+.card.answered-wrong{border-left-color:#f87171}
+.card.mastered{opacity:.45}
+
+/* CARD TOP */
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.word-area{flex:1}
+.ep-badge{font-size:.65rem;color:#aaa;margin-bottom:6px}
+.word{font-size:2rem;font-weight:700;line-height:1.7;letter-spacing:.02em}
+.chk{width:26px;height:26px;border:2px solid #dde0e8;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px;transition:all .2s;margin-left:8px}
+.chk.on{background:#4ade80;border-color:#4ade80;color:#fff}
+
+/* CHOICES */
+.choices{display:flex;flex-direction:column;gap:7px}
+.c-btn{width:100%;padding:13px 14px;border:2px solid #e0e4ed;border-radius:10px;background:#fafbff;font-size:.92rem;cursor:pointer;text-align:left;font-family:inherit;font-weight:500;transition:all .15s;line-height:1.3}
+.c-btn:active{transform:scale(.98)}
+.c-btn.s-correct{background:#dcfce7;border-color:#4ade80;color:#166534;font-weight:700}
+.c-btn.s-wrong{background:#fee2e2;border-color:#f87171;color:#991b1b}
+.c-btn.show-ans{background:#dcfce7;border-color:#4ade80;color:#166534;font-weight:700}
+.c-btn.disabled{pointer-events:none;opacity:.7}
+
+/* ANSWER BOX */
+.ans-box{margin-top:12px;padding:12px;background:#f8f9ff;border-radius:10px;display:none}
+.ans-box.show{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.ans-result{font-size:.95rem;font-weight:800;margin-bottom:8px}
+.ans-ex-jp{font-size:.98rem;font-weight:600;color:#1a1a2e;line-height:2;margin-top:2px}
+.ans-ex-kr{font-size:.8rem;color:#5a5f7d;margin-top:2px;line-height:1.4}
+.ex-row{display:flex;align-items:center;gap:8px}
+.tts-btn{background:none;border:none;font-size:1.1rem;cursor:pointer;padding:2px 4px;flex-shrink:0}
+.tts-btn.playing{animation:pulse .6s infinite alternate}
+@keyframes pulse{from{opacity:1}to{opacity:.3}}
+
+/* BOTTOM */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:1px solid #e8eaf0;display:flex;gap:8px;z-index:199}
+.reset-btn{flex:1;padding:12px;background:#f0f2f5;color:#555;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
+.wrong-btn{flex:1;padding:12px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit}
+.empty{text-align:center;padding:60px 20px;color:#aaa;font-size:.9rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🇯🇵 단어 훈련 — 치이카와</h1>
+  <div class="progress-bar"><div class="progress-fill" id="pFill" style="width:0%"></div></div>
+  <div class="stats">
+    <span id="sTot">0/30</span>
+    <span id="sOk">✅ 0</span>
+    <span id="sNg">❌ 0</span>
+    <span id="sMt">⭐ 0</span>
+  </div>
+</header>
+
+<div class="filter-wrap">
+  <div class="filter-bar" id="statusBar">
+    <button class="f-btn active" onclick="setStatus('all',this)">전체</button>
+    <button class="f-btn" onclick="setStatus('unanswered',this)">미답변</button>
+    <button class="f-btn" onclick="setStatus('wrong',this)">틀린것만 ❌</button>
+    <button class="f-btn" onclick="setStatus('correct',this)">맞은것 ✅</button>
+    <button class="f-btn" onclick="setStatus('mastered',this)">완료 ⭐</button>
+  </div>
+  <div class="filter-bar" id="epBar">
+    <button class="f-btn ep-active" onclick="setEp('all',this)">전체 화</button>
+    <button class="f-btn" onclick="setEp('2화',this)">2화 스핑크스</button>
+    <button class="f-btn" onclick="setEp('5화',this)">5화 챠루메라</button>
+    <button class="f-btn" onclick="setEp('6화',this)">6화 도라야키</button>
+    <button class="f-btn" onclick="setEp('7화',this)">7화 반짝이</button>
+    <button class="f-btn" onclick="setEp('8화',this)">8화 헤어볼</button>
+  </div>
+</div>
+
+<div class="cards" id="cards"></div>
+
+<div class="bottom-bar">
+  <button class="reset-btn" onclick="resetAll()">🔄 초기화</button>
+  <button class="wrong-btn" onclick="showWrong()">❌ 틀린것만</button>
+</div>
+
+<script>
+// ── VOCAB DATA ────────────────────────────────────────────────────
+const VOCAB = [
+  // 2화 스핑크스 ─────────────────────────────
+  { id:1, ep:'2화', epLabel:'2화 · 스핑크스',
+    wordDisp:'ぜったい', wordPlain:'ぜったい', meaning:'무조건, 절대로',
+    exDisp:'こんなのさ、ぜったいあれじゃ。', exPlain:'こんなのさ、ぜったいあれじゃ。', exKr:'이런건 말야, 무조건 그거잖아.' },
+
+  { id:2, ep:'2화', epLabel:'2화 · 스핑크스',
+    wordDisp:'<ruby>本物<rt>ほんもの</rt></ruby>', wordPlain:'本物', meaning:'진짜, 실물',
+    exDisp:'<ruby>本物<rt>ほんもの</rt></ruby>だ。いるんだね。', exPlain:'本物だ。いるんだね。', exKr:'진짜다. 있었네.' },
+
+  { id:3, ep:'2화', epLabel:'2화 · 스핑크스',
+    wordDisp:'<ruby>話<rt>はな</rt></ruby>しかける', wordPlain:'話しかける', meaning:'말을 걸다',
+    exDisp:'<ruby>話<rt>はな</rt></ruby>しかけてみようか', exPlain:'話しかけてみようか', exKr:'말 걸어볼까?' },
+
+  { id:4, ep:'2화', epLabel:'2화 · 스핑크스',
+    wordDisp:'ついてくる', wordPlain:'ついてくる', meaning:'따라오다',
+    exDisp:'ついてくる、ついてくる。', exPlain:'ついてくる、ついてくる。', exKr:'따라온다, 따라온다.' },
+
+  { id:5, ep:'2화', epLabel:'2화 · 스핑크스',
+    wordDisp:'あれじゃん', wordPlain:'あれじゃん', meaning:'그거잖아',
+    exDisp:'これって、あれじゃん。あれだよ、あれ。', exPlain:'これって、あれじゃん。あれだよ、あれ。', exKr:'이거 그거잖아. 그거야, 그거.' },
+
+  { id:6, ep:'2화', epLabel:'2화 · 스핑크스',
+    wordDisp:'いるんだね', wordPlain:'いるんだね', meaning:'있었네, 있구나',
+    exDisp:'いるんだね、こういうことも。', exPlain:'いるんだね、こういうことも。', exKr:'있었네, 이런 일도.' },
+
+  // 5화 챠루메라 ─────────────────────────────
+  { id:7, ep:'5화', epLabel:'5화 · 챠루메라',
+    wordDisp:'<ruby>美味<rt>おい</rt></ruby>しい', wordPlain:'美味しい', meaning:'맛있다',
+    exDisp:'<ruby>美味<rt>おい</rt></ruby>しいよね、チャルメラって。', exPlain:'美味しいよね、チャルメラって。', exKr:'맛있지, 챠루메라는.' },
+
+  { id:8, ep:'5화', epLabel:'5화 · 챠루메라',
+    wordDisp:'このまえ', wordPlain:'このまえ', meaning:'요전에, 얼마 전에',
+    exDisp:'このまえのさ、ラーメン<ruby>食<rt>た</rt></ruby>べてじゃん。', exPlain:'このまえのさ、ラーメン食べてじゃん。', exKr:'요전에 말야, 라멘 먹었잖아.' },
+
+  { id:9, ep:'5화', epLabel:'5화 · 챠루메라',
+    wordDisp:'ツルツル', wordPlain:'ツルツル', meaning:'쭈루쭈루, 매끄럽게',
+    exDisp:'ツルツルの。', exPlain:'ツルツルの。', exKr:'쭈루쭈루 하는거.' },
+
+  { id:10, ep:'5화', epLabel:'5화 · 챠루메라',
+    wordDisp:'〜なんだって', wordPlain:'なんだって', meaning:'〜래, 〜라더라',
+    exDisp:'チャルメラなんだって。', exPlain:'チャルメラなんだって。', exKr:'챠루메라래.' },
+
+  { id:11, ep:'5화', epLabel:'5화 · 챠루메라',
+    wordDisp:'<ruby>作<rt>つく</rt></ruby>る', wordPlain:'作る', meaning:'만들다',
+    exDisp:'<ruby>作<rt>つく</rt></ruby>るね。', exPlain:'作るね。', exKr:'만들게.' },
+
+  { id:12, ep:'5화', epLabel:'5화 · 챠루메라',
+    wordDisp:'<ruby>食<rt>た</rt></ruby>べよ', wordPlain:'食べよ', meaning:'먹자 (권유)',
+    exDisp:'<ruby>食<rt>た</rt></ruby>べよ、ねえ。', exPlain:'食べよ、ねえ。', exKr:'먹자, 좋지?' },
+
+  // 6화 도라야키 ─────────────────────────────
+  { id:13, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'<ruby>友達<rt>ともだち</rt></ruby>', wordPlain:'友達', meaning:'친구',
+    exDisp:'<ruby>友達<rt>ともだち</rt></ruby>？', exPlain:'友達？', exKr:'친구?' },
+
+  { id:14, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'こっち', wordPlain:'こっち', meaning:'이쪽, 여기',
+    exDisp:'こっち、<ruby>見<rt>み</rt></ruby>て！', exPlain:'こっち、見て！', exKr:'여기 봐!' },
+
+  { id:15, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'<ruby>声<rt>こえ</rt></ruby>', wordPlain:'声', meaning:'목소리',
+    exDisp:'<ruby>声<rt>こえ</rt></ruby>、でか！', exPlain:'声、でか！', exKr:'목소리, 크다!' },
+
+  { id:16, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'でかい', wordPlain:'でかい', meaning:'크다 (구어)',
+    exDisp:'でっかいどら<ruby>焼<rt>や</rt></ruby>きなんだけど', exPlain:'でっかいどら焼きなんだけど', exKr:'엄청 큰 도라야키인데.' },
+
+  { id:17, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'もってくる', wordPlain:'もってくる', meaning:'가져오다',
+    exDisp:'お<ruby>茶<rt>ちゃ</rt></ruby>もってくるね', exPlain:'お茶もってくるね', exKr:'차 가져올게.' },
+
+  { id:18, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'ひらく', wordPlain:'ひらく', meaning:'열다',
+    exDisp:'ひらきま〜す', exPlain:'ひらきます', exKr:'열게요~' },
+
+  { id:19, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'うぐいすあん', wordPlain:'うぐいすあん', meaning:'완두 앙금',
+    exDisp:'うぐいすあんだ！', exPlain:'うぐいすあんだ！', exKr:'완두앙금이다!' },
+
+  { id:20, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'あんこ', wordPlain:'あんこ', meaning:'팥 앙금',
+    exDisp:'ふつうのあんこだとおもってたら', exPlain:'ふつうのあんこだとおもってたら', exKr:'그냥 팥 앙금인줄 알았는데.' },
+
+  { id:21, ep:'6화', epLabel:'6화 · 도라야키',
+    wordDisp:'〜とおもってたら', wordPlain:'とおもってたら', meaning:'〜인줄 알았는데',
+    exDisp:'ふつうのあんこだとおもってたら', exPlain:'ふつうのあんこだとおもってたら', exKr:'그냥 팥 앙금인줄 알았는데.' },
+
+  // 7화 반짝이 카드 ──────────────────────────
+  { id:22, ep:'7화', epLabel:'7화 · 반짝이 카드',
+    wordDisp:'こうかんする', wordPlain:'こうかんする', meaning:'교환하다',
+    exDisp:'こうかんしようか？', exPlain:'こうかんしようか？', exKr:'교환할까?' },
+
+  { id:23, ep:'7화', epLabel:'7화 · 반짝이 카드',
+    wordDisp:'はがれそう', wordPlain:'はがれそう', meaning:'벗겨질 것 같아 (추측)',
+    exDisp:'これなんかはがれそう！', exPlain:'これなんかはがれそう！', exKr:'뭔가 벗겨질 것 같아!' },
+
+  { id:24, ep:'7화', epLabel:'7화 · 반짝이 카드',
+    wordDisp:'はがれるよ', wordPlain:'はがれるよ', meaning:'벗겨진다! (확신)',
+    exDisp:'これなんかはがれるよ！', exPlain:'これなんかはがれるよ！', exKr:'뭔가 벗겨진다!' },
+
+  { id:25, ep:'7화', epLabel:'7화 · 반짝이 카드',
+    wordDisp:'つよっ', wordPlain:'つよっ', meaning:'쎄다!',
+    exDisp:'つよっ！', exPlain:'つよっ！', exKr:'쎄다!' },
+
+  // 8화 헤어볼 ───────────────────────────────
+  { id:26, ep:'8화', epLabel:'8화 · 헤어볼',
+    wordDisp:'それでさ', wordPlain:'それでさ', meaning:'그래서 말인데',
+    exDisp:'それでさ、まえのスフインクス、<ruby>見<rt>み</rt></ruby>に<ruby>行<rt>い</rt></ruby>ったの。',
+    exPlain:'それでさ、まえのスフインクス、見に行ったの。', exKr:'그래서 말인데, 전에 그 스핑크스 보러갔었잖아.' },
+
+  { id:27, ep:'8화', epLabel:'8화 · 헤어볼',
+    wordDisp:'そしたら', wordPlain:'そしたら', meaning:'그랬더니, 가봤더니',
+    exDisp:'そしたら、もういなくて。', exPlain:'そしたら、もういなくて。', exKr:'가봤더니, 이미 없어서.' },
+
+  { id:28, ep:'8화', epLabel:'8화 · 헤어볼',
+    wordDisp:'けだま', wordPlain:'けだま', meaning:'헤어볼',
+    exDisp:'けだまだった', exPlain:'けだまだった', exKr:'헤어볼이었어.' },
+
+  { id:29, ep:'8화', epLabel:'8화 · 헤어볼',
+    wordDisp:'よくある', wordPlain:'よくある', meaning:'자주 있는 일이야',
+    exDisp:'よくあるから、<ruby>大丈夫<rt>だいじょうぶ</rt></ruby>。', exPlain:'よくあるから、大丈夫。', exKr:'자주 있는 일이니까, 괜찮아.' },
+
+  { id:30, ep:'8화', epLabel:'8화 · 헤어볼',
+    wordDisp:'<ruby>大丈夫<rt>だいじょうぶ</rt></ruby>', wordPlain:'大丈夫', meaning:'괜찮아',
+    exDisp:'よくあるから、<ruby>大丈夫<rt>だいじょうぶ</rt></ruby>。', exPlain:'よくあるから、大丈夫。', exKr:'자주 있는 일이니까, 괜찮아.' },
+];
+
+const TOTAL = VOCAB.length;
+
+// ── WRONG CHOICE GENERATION ───────────────────────────────────────
+function seededShuffle(arr, seed){
+  const a = [...arr];
+  let s = seed;
+  for(let i = a.length - 1; i > 0; i--){
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildChoices(v){
+  const pool = VOCAB.filter(x => x.meaning !== v.meaning);
+  const i1 = (v.id * 7 + 3) % pool.length;
+  let i2 = (v.id * 13 + 5) % pool.length;
+  if(i2 === i1) i2 = (i2 + 1) % pool.length;
+  const all = [v.meaning, pool[i1].meaning, pool[i2].meaning];
+  return seededShuffle(all, v.id);
+}
+
+const QUESTIONS = VOCAB.map(v => ({ ...v, choices: buildChoices(v) }));
+
+// ── STATE ─────────────────────────────────────────────────────────
+let state = {};
+let statusFilter = 'all';
+let epFilter = 'all';
+
+function loadState(){ try{ state = JSON.parse(localStorage.getItem('jpvocab')||'{}'); }catch(e){ state={}; } }
+function saveState(){ localStorage.setItem('jpvocab', JSON.stringify(state)); }
+
+// ── TTS ───────────────────────────────────────────────────────────
+let currentAudio = null;
+function speak(text, btn){
+  if(currentAudio){ currentAudio.pause(); currentAudio = null; }
+  document.querySelectorAll('.tts-btn.playing').forEach(b => b.classList.remove('playing'));
+  if(btn) btn.classList.add('playing');
+  const url = 'https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=gtx&q=' + encodeURIComponent(text);
+  const audio = new Audio(url);
+  currentAudio = audio;
+  audio.onended = () => { if(btn) btn.classList.remove('playing'); currentAudio = null; };
+  audio.onerror = () => {
+    if(btn) btn.classList.remove('playing');
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'ja-JP'; utt.rate = 0.85;
+    speechSynthesis.speak(utt);
+  };
+  audio.play().catch(() => audio.onerror());
+}
+
+// ── RENDER ────────────────────────────────────────────────────────
+function render(){
+  const wrap = document.getElementById('cards');
+  wrap.innerHTML = '';
+  let lastEp = null, visible = 0;
+
+  QUESTIONS.forEach(q => {
+    const s = state[q.id] || {};
+    const isAnswered = s.pick !== undefined;
+    const isCorrect = isAnswered && s.pick === q.meaning;
+    const isWrong = isAnswered && !isCorrect;
+    const isMastered = !!s.mastered;
+
+    // episode filter
+    if(epFilter !== 'all' && q.ep !== epFilter) return;
+
+    // status filter
+    let show = true;
+    if(statusFilter === 'unanswered') show = !isAnswered;
+    else if(statusFilter === 'wrong') show = isWrong;
+    else if(statusFilter === 'correct') show = isCorrect;
+    else if(statusFilter === 'mastered') show = isMastered;
+    if(!show) return;
+    visible++;
+
+    // episode label
+    if(q.ep !== lastEp){
+      const lbl = document.createElement('div');
+      lbl.className = 'ep-label';
+      lbl.textContent = q.epLabel;
+      wrap.appendChild(lbl);
+      lastEp = q.ep;
+    }
+
+    // card
+    const card = document.createElement('div');
+    card.id = 'card-' + q.id;
+    card.className = 'card' +
+      (isCorrect ? ' answered-correct' : '') +
+      (isWrong ? ' answered-wrong' : '') +
+      (isMastered ? ' mastered' : '');
+
+    // top
+    const top = document.createElement('div');
+    top.className = 'card-top';
+    const wa = document.createElement('div');
+    wa.className = 'word-area';
+    const word = document.createElement('div');
+    word.className = 'word';
+    word.innerHTML = q.wordDisp;
+    wa.appendChild(word);
+    const chk = document.createElement('div');
+    chk.className = 'chk' + (isMastered ? ' on' : '');
+    chk.textContent = isMastered ? '⭐' : '';
+    chk.onclick = () => toggleMaster(q.id);
+    top.appendChild(wa);
+    top.appendChild(chk);
+
+    // choices
+    const choices = document.createElement('div');
+    choices.className = 'choices';
+    q.choices.forEach(label => {
+      const btn = document.createElement('button');
+      btn.className = 'c-btn';
+      btn.textContent = label;
+      if(isAnswered){
+        btn.classList.add('disabled');
+        if(label === q.meaning) btn.classList.add('show-ans');
+        if(label === s.pick && s.pick !== q.meaning) btn.classList.add('s-wrong');
+      } else {
+        btn.onclick = () => answer(q.id, label);
+      }
+      choices.appendChild(btn);
+    });
+
+    // answer box
+    const ansBox = document.createElement('div');
+    ansBox.className = 'ans-box' + (isAnswered ? ' show' : '');
+    if(isAnswered){
+      const emoji = isCorrect ? '✅' : '❌';
+      ansBox.innerHTML =
+        '<div class="ans-result">'+emoji+' '+q.meaning+'</div>'+
+        '<div class="ex-row">'+
+          '<div class="ans-ex-jp">'+q.exDisp+'</div>'+
+          '<button class="tts-btn" onclick="speak(\''+q.exPlain.replace(/'/g,"\\'") +'\',this)">🔊</button>'+
+        '</div>'+
+        '<div class="ans-ex-kr">'+q.exKr+'</div>';
+    }
+
+    card.appendChild(top);
+    card.appendChild(choices);
+    card.appendChild(ansBox);
+    wrap.appendChild(card);
+  });
+
+  if(visible === 0){
+    const e = document.createElement('div');
+    e.className = 'empty';
+    e.textContent = '해당하는 단어가 없어요 😊';
+    wrap.appendChild(e);
+  }
+  updateStats();
+}
+
+// ── ANSWER ────────────────────────────────────────────────────────
+function answer(id, picked){
+  if(!state[id]) state[id] = {};
+  state[id].pick = picked;
+  saveState();
+
+  const q = QUESTIONS.find(x => x.id === id);
+  const isCorrect = picked === q.meaning;
+  const card = document.getElementById('card-' + id);
+
+  card.className = 'card ' + (isCorrect ? 'answered-correct' : 'answered-wrong');
+
+  card.querySelectorAll('.c-btn').forEach(b => {
+    b.classList.add('disabled');
+    if(b.textContent === q.meaning) b.classList.add('show-ans');
+    if(b.textContent === picked && !isCorrect) b.classList.add('s-wrong');
+    b.onclick = null;
+  });
+
+  const emoji = isCorrect ? '✅' : '❌';
+  const ansBox = card.querySelector('.ans-box');
+  ansBox.innerHTML =
+    '<div class="ans-result">'+emoji+' '+q.meaning+'</div>'+
+    '<div class="ex-row">'+
+      '<div class="ans-ex-jp">'+q.exDisp+'</div>'+
+      '<button class="tts-btn" id="tts-'+id+'" onclick="speak(\''+q.exPlain.replace(/'/g,"\\'") +'\',this)">🔊</button>'+
+    '</div>'+
+    '<div class="ans-ex-kr">'+q.exKr+'</div>';
+  ansBox.classList.add('show');
+
+  setTimeout(() => {
+    const btn = document.getElementById('tts-' + id);
+    if(btn) speak(q.exPlain, btn);
+  }, 350);
+
+  updateStats();
+}
+
+// ── MASTER ────────────────────────────────────────────────────────
+function toggleMaster(id){
+  if(!state[id]) state[id] = {};
+  state[id].mastered = !state[id].mastered;
+  saveState();
+  render();
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────
+function setStatus(f, btn){
+  statusFilter = f;
+  document.querySelectorAll('#statusBar .f-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  render();
+}
+
+function setEp(f, btn){
+  epFilter = f;
+  document.querySelectorAll('#epBar .f-btn').forEach(b => b.classList.remove('ep-active'));
+  if(btn) btn.classList.add('ep-active');
+  render();
+}
+
+function showWrong(){
+  statusFilter = 'wrong'; epFilter = 'all';
+  document.querySelectorAll('#statusBar .f-btn').forEach((b,i) => b.classList.toggle('active', i===2));
+  document.querySelectorAll('#epBar .f-btn').forEach((b,i) => b.classList.toggle('ep-active', i===0));
+  render();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── STATS ─────────────────────────────────────────────────────────
+function updateStats(){
+  let answered=0, correct=0, wrong=0, mastered=0;
+  VOCAB.forEach(v => {
+    const s = state[v.id]||{};
+    if(s.pick !== undefined){ answered++; s.pick===v.meaning ? correct++ : wrong++; }
+    if(s.mastered) mastered++;
+  });
+  document.getElementById('sTot').textContent = answered+'/'+TOTAL;
+  document.getElementById('sOk').textContent = '✅ '+correct;
+  document.getElementById('sNg').textContent = '❌ '+wrong;
+  document.getElementById('sMt').textContent = '⭐ '+mastered;
+  document.getElementById('pFill').style.width = (answered/TOTAL*100).toFixed(1)+'%';
+}
+
+// ── RESET ─────────────────────────────────────────────────────────
+function resetAll(){
+  if(!confirm('전체 초기화할게요?')) return;
+  state = {}; saveState();
+  statusFilter = 'all'; epFilter = 'all';
+  document.querySelectorAll('#statusBar .f-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.querySelectorAll('#epBar .f-btn').forEach((b,i) => b.classList.toggle('ep-active', i===0));
+  render();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+loadState();
+render();
+</script>
+</body>
+</html>
