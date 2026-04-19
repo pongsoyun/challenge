@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🇯🇵 일본어 여행회화 퀴즈</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --border: #e5e5ea;
+      --text: #1c1c1e;
+      --sub: #8e8e93;
+      --o: #34c759;
+      --x: #ff3b30;
+      --accent: #007aff;
+      --reveal-bg: #f2f2f7;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+    }
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(245,245,247,0.92);
+      backdrop-filter: blur(12px);
+      padding: 12px 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    h1 { font-size: 17px; font-weight: 700; }
+    .mode-toggle { display: flex; background: var(--border); border-radius: 8px; padding: 2px; }
+    .mode-btn { padding: 5px 14px; border: none; background: transparent; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--sub); transition: all .2s; }
+    .mode-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+    .stats-bar { display: flex; gap: 10px; align-items: center; font-size: 13px; padding-bottom: 8px; }
+    .stat { display: flex; align-items: center; gap: 3px; font-weight: 700; }
+    .stat.o { color: var(--o); }
+    .stat.x { color: var(--x); }
+    .stat.total { color: var(--sub); font-weight: 500; }
+    .progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 1px; }
+    .progress-fill { height: 100%; background: var(--o); border-radius: 2px; transition: width .4s; }
+    .filter-row { display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px; scrollbar-width: none; }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-btn { padding: 5px 13px; border: 1.5px solid var(--border); border-radius: 20px; background: var(--card); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--sub); transition: all .2s; }
+    .filter-btn.active { background: var(--text); border-color: var(--text); color: #fff; }
+    .filter-btn.review-btn.active { background: var(--x); border-color: var(--x); }
+    .cards { padding: 4px 16px 120px; display: flex; flex-direction: column; gap: 8px; }
+    .cat-header { font-size: 12px; font-weight: 700; color: var(--sub); padding: 14px 0 2px; letter-spacing: .4px; }
+    .card { background: var(--card); border-radius: 14px; padding: 13px 12px; display: flex; align-items: flex-start; gap: 10px; border: 1.5px solid transparent; transition: border-color .2s, background .2s; }
+    .card.status-o { border-color: var(--o); background: #f0fdf4; }
+    .card.status-x { border-color: var(--x); background: #fff5f5; }
+    .ox-wrap { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; padding-top: 2px; }
+    .ox-btn { width: 34px; height: 34px; border-radius: 9px; border: 2px solid var(--border); background: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; -webkit-tap-highlight-color: transparent; }
+    .ox-btn.o-btn.selected { background: var(--o); border-color: var(--o); }
+    .ox-btn.x-btn.selected { background: var(--x); border-color: var(--x); }
+    .card-content { flex: 1; min-width: 0; }
+    .card-num { font-size: 10px; color: var(--sub); font-weight: 600; margin-bottom: 4px; }
+    .question { font-size: 16px; font-weight: 600; line-height: 1.45; margin-bottom: 6px; }
+    .jp-text { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 6px; padding: 1px 0; }
+    .jp-text .spk { font-size: 13px; opacity: .55; transition: opacity .2s; }
+    .jp-text:active .spk { opacity: 1; }
+    @keyframes pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+    .jp-text.speaking .spk { animation: pulse .5s infinite; }
+    .answer-wrap { margin-top: 2px; }
+    .reveal-btn { font-size: 13px; color: var(--accent); font-weight: 600; cursor: pointer; padding: 3px 0; border: none; background: none; -webkit-tap-highlight-color: transparent; }
+    .answer { display: none; margin-top: 6px; padding: 9px 11px; background: var(--reveal-bg); border-radius: 9px; font-size: 15px; font-weight: 500; line-height: 1.4; }
+    .answer.show { display: block; }
+    .answer .reading { font-size: 11px; color: var(--sub); margin-top: 3px; }
+    .empty { text-align: center; padding: 70px 20px; color: var(--sub); }
+    .empty .em { font-size: 52px; margin-bottom: 14px; }
+    .empty p { font-size: 16px; font-weight: 600; line-height: 1.6; }
+    .bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(245,245,247,0.95); backdrop-filter: blur(12px); padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); display: flex; gap: 8px; }
+    .btn-secondary { flex: 1; padding: 13px; border: 1.5px solid var(--border); border-radius: 11px; background: var(--card); font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text); }
+    .btn-primary { flex: 2; padding: 13px; border: none; border-radius: 11px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-top">
+    <h1>🇯🇵 일본어 여행회화</h1>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="v1btn" onclick="setMode(1)">한 → 日</button>
+      <button class="mode-btn" id="v2btn" onclick="setMode(2)">日 → 한</button>
+    </div>
+  </div>
+  <div class="stats-bar">
+    <span class="stat o">⭕ <span id="oCount">0</span></span>
+    <span class="stat x">❌ <span id="xCount">0</span></span>
+    <span class="stat total">/ <span id="total">0</span>문장</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+</div>
+<div class="filter-row">
+  <button class="filter-btn active" onclick="setCat('all',this)">전체</button>
+  <button class="filter-btn" onclick="setCat('basic',this)">🛫 기본/공항</button>
+  <button class="filter-btn" onclick="setCat('transport',this)">🚃 교통/길찾기</button>
+  <button class="filter-btn" onclick="setCat('food',this)">🍜 음식점</button>
+  <button class="filter-btn" onclick="setCat('shop',this)">👕 쇼핑</button>
+  <button class="filter-btn review-btn" id="reviewBtn" onclick="toggleReview(this)">❌ 틀린것만</button>
+</div>
+<div class="cards" id="cards"></div>
+<div class="bottom-bar">
+  <button class="btn-secondary" onclick="resetAll()">초기화</button>
+  <button class="btn-primary" id="revealAllBtn" onclick="toggleRevealAll()">전체 답 보기</button>
+</div>
+<script>
+const DATA = [
+  {id:1,cat:'basic',jp:'こんにちは',rd:'こんにちは',kr:'안녕하세요'},
+  {id:2,cat:'basic',jp:'すみません',rd:'すみません',kr:'저기요'},
+  {id:3,cat:'basic',jp:'観光です',rd:'かんこうです',kr:'관광이에요'},
+  {id:4,cat:'basic',jp:'3日間です',rd:'みっかかんです',kr:'3일이에요'},
+  {id:5,cat:'basic',jp:'これです',rd:'これです',kr:'이거예요'},
+  {id:6,cat:'basic',jp:'ここです',rd:'ここです',kr:'여기예요'},
+  {id:7,cat:'basic',jp:'大丈夫です',rd:'だいじょうぶです',kr:'괜찮아요'},
+  {id:8,cat:'basic',jp:'ちょっと分からないです',rd:'ちょっとわからないです',kr:'잘 모르겠어요'},
+  {id:9,cat:'basic',jp:'もう一回いいですか',rd:'もういっかいいいですか',kr:'한 번 더 괜찮아요?'},
+  {id:10,cat:'basic',jp:'ゆっくりお願いします',rd:'ゆっくりおねがいします',kr:'천천히 부탁드려요'},
+  {id:11,cat:'basic',jp:'英語大丈夫ですか',rd:'えいごだいじょうぶですか',kr:'영어 괜찮으세요'},
+  {id:12,cat:'basic',jp:'日本語少しだけです',rd:'にほんごすこしだけです',kr:'일본어 조금이에요'},
+  {id:13,cat:'basic',jp:'初めて来ました',rd:'はじめてきました',kr:'처음 왔어요'},
+  {id:14,cat:'basic',jp:'楽しみです',rd:'たのしみです',kr:'기대돼요'},
+  {id:15,cat:'basic',jp:'疲れました',rd:'つかれました',kr:'피곤해요'},
+  {id:16,cat:'basic',jp:'ちょっと休みたいです',rd:'ちょっとやすみたいです',kr:'좀 쉬고 싶어요'},
+  {id:17,cat:'basic',jp:'ここで待ちます',rd:'ここでまちます',kr:'여기서 기다릴게요'},
+  {id:18,cat:'basic',jp:'これでいいですか',rd:'これでいいですか',kr:'이걸로 괜찮아요?'},
+  {id:19,cat:'basic',jp:'違います',rd:'ちがいます',kr:'아니에요'},
+  {id:20,cat:'basic',jp:'そうです',rd:'そうです',kr:'맞아요'},
+  {id:21,cat:'basic',jp:'ありがとうございます',rd:'ありがとうございます',kr:'감사합니다'},
+  {id:22,cat:'basic',jp:'助かりました',rd:'たすかりました',kr:'도움 됐어요'},
+  {id:23,cat:'basic',jp:'すごいですね',rd:'すごいですね',kr:'대단하네요'},
+  {id:24,cat:'basic',jp:'いいですね',rd:'いいですね',kr:'좋네요'},
+  {id:25,cat:'basic',jp:'人気ありますか',rd:'にんきありますか',kr:'인기 있나요'},
+  {id:26,cat:'basic',jp:'おすすめありますか',rd:'おすすめありますか',kr:'추천 있어요'},
+  {id:27,cat:'basic',jp:'これ人気ですか',rd:'これにんきですか',kr:'이거 인기 많아요'},
+  {id:28,cat:'basic',jp:'よく来ますか',rd:'よくきますか',kr:'자주 와요'},
+  {id:29,cat:'basic',jp:'どこからですか',rd:'どこからですか',kr:'어디서 왔어요'},
+  {id:30,cat:'basic',jp:'韓国からです',rd:'かんこくからです',kr:'한국에서 왔어요'},
+  {id:31,cat:'basic',jp:'旅行です',rd:'りょこうです',kr:'여행이에요'},
+  {id:32,cat:'basic',jp:'何してますか',rd:'なにしてますか',kr:'뭐 하세요'},
+  {id:33,cat:'basic',jp:'忙しいですか',rd:'いそがしいですか',kr:'바쁘세요'},
+  {id:34,cat:'basic',jp:'今大丈夫ですか',rd:'いまだいじょうぶですか',kr:'지금 괜찮아요'},
+  {id:35,cat:'basic',jp:'ちょっといいですか',rd:'ちょっといいですか',kr:'잠깐 괜찮아요'},
+  {id:36,cat:'basic',jp:'これお願いします',rd:'これおねがいします',kr:'이거 주세요'},
+  {id:37,cat:'basic',jp:'写真いいですか',rd:'しゃしんいいですか',kr:'사진 괜찮아요'},
+  {id:38,cat:'basic',jp:'一緒に撮りましょう',rd:'いっしょにとりましょう',kr:'같이 찍어요'},
+  {id:39,cat:'basic',jp:'また来ます',rd:'またきます',kr:'또 올게요'},
+  {id:40,cat:'basic',jp:'楽しかったです',rd:'たのしかったです',kr:'즐거웠어요'},
+  {id:41,cat:'transport',jp:'駅どこですか',rd:'えきどこですか',kr:'역 어디예요'},
+  {id:42,cat:'transport',jp:'この電車、新宿行きますか',rd:'このでんしゃしんじゅくいきますか',kr:'이거 신주쿠 가요'},
+  {id:43,cat:'transport',jp:'これ乗っていいですか',rd:'これのっていいですか',kr:'이거 타도 돼요'},
+  {id:44,cat:'transport',jp:'どっちですか',rd:'どっちですか',kr:'어느 쪽이에요'},
+  {id:45,cat:'transport',jp:'右ですか',rd:'みぎですか',kr:'오른쪽이에요'},
+  {id:46,cat:'transport',jp:'左ですか',rd:'ひだりですか',kr:'왼쪽이에요'},
+  {id:47,cat:'transport',jp:'まっすぐですか',rd:'まっすぐですか',kr:'직진이에요'},
+  {id:48,cat:'transport',jp:'遠いですか',rd:'とおいですか',kr:'멀어요'},
+  {id:49,cat:'transport',jp:'近いですか',rd:'ちかいですか',kr:'가까워요'},
+  {id:50,cat:'transport',jp:'歩けますか',rd:'あるけますか',kr:'걸어갈 수 있어요'},
+  {id:51,cat:'transport',jp:'どれくらいかかりますか',rd:'どれくらいかかりますか',kr:'얼마나 걸려요'},
+  {id:52,cat:'transport',jp:'乗り換えありますか',rd:'のりかえありますか',kr:'환승 있어요'},
+  {id:53,cat:'transport',jp:'ここで降ります',rd:'ここでおります',kr:'여기서 내릴게요'},
+  {id:54,cat:'transport',jp:'次どこですか',rd:'つぎどこですか',kr:'다음 어디예요'},
+  {id:55,cat:'transport',jp:'ここ止まりますか',rd:'こことまりますか',kr:'여기 서요'},
+  {id:56,cat:'transport',jp:'出口どこですか',rd:'でぐちどこですか',kr:'출구 어디예요'},
+  {id:57,cat:'transport',jp:'タクシーお願いします',rd:'たくしーおねがいします',kr:'택시 부탁해요'},
+  {id:58,cat:'transport',jp:'ここまでお願いします',rd:'ここまでおねがいします',kr:'여기까지 부탁해요'},
+  {id:59,cat:'transport',jp:'早めでお願いします',rd:'はやめでおねがいします',kr:'좀 빨리 부탁해요'},
+  {id:60,cat:'transport',jp:'ゆっくりで大丈夫です',rd:'ゆっくりでだいじょうぶです',kr:'천천히 가셔도 돼요'},
+  {id:61,cat:'transport',jp:'止めてください',rd:'とめてください',kr:'세워주세요'},
+  {id:62,cat:'transport',jp:'ここでいいです',rd:'ここでいいです',kr:'여기면 돼요'},
+  {id:63,cat:'transport',jp:'カード使えますか',rd:'かーどつかえますか',kr:'카드 되나요'},
+  {id:64,cat:'transport',jp:'現金だけですか',rd:'げんきんだけですか',kr:'현금만 되나요'},
+  {id:65,cat:'transport',jp:'領収書お願いします',rd:'りょうしゅうしょおねがいします',kr:'영수증 주세요'},
+  {id:66,cat:'transport',jp:'お釣り大丈夫です',rd:'おつりだいじょうぶです',kr:'거스름돈 괜찮아요'},
+  {id:67,cat:'transport',jp:'少し待ってもいいですか',rd:'すこしまってもいいですか',kr:'잠깐 기다려도 돼요'},
+  {id:68,cat:'transport',jp:'今急いでます',rd:'いまいそいでます',kr:'지금 급해요'},
+  {id:69,cat:'transport',jp:'間に合いますか',rd:'まにあいますか',kr:'늦지 않아요'},
+  {id:70,cat:'transport',jp:'助かります',rd:'たすかります',kr:'도움 됩니다'},
+  {id:91,cat:'food',jp:'1人です',rd:'ひとりです',kr:'1명이에요'},
+  {id:92,cat:'food',jp:'2人です',rd:'ふたりです',kr:'2명이에요'},
+  {id:93,cat:'food',jp:'空いてますか',rd:'あいてますか',kr:'자리 있어요'},
+  {id:94,cat:'food',jp:'メニューお願いします',rd:'めにゅーおねがいします',kr:'메뉴 부탁해요'},
+  {id:95,cat:'food',jp:'おすすめありますか',rd:'おすすめありますか',kr:'추천 있어요'},
+  {id:96,cat:'food',jp:'これお願いします',rd:'これおねがいします',kr:'이거 주세요'},
+  {id:97,cat:'food',jp:'これとこれお願いします',rd:'これとこれおねがいします',kr:'이거랑 이거 주세요'},
+  {id:98,cat:'food',jp:'飲み物どうしますか',rd:'のみものどうしますか',kr:'음료 뭐 할래요'},
+  {id:99,cat:'food',jp:'水お願いします',rd:'みずおねがいします',kr:'물 주세요'},
+  {id:100,cat:'food',jp:'ビールお願いします',rd:'びーるおねがいします',kr:'맥주 주세요'},
+  {id:101,cat:'food',jp:'すみません、注文いいですか',rd:'すみませんちゅうもんいいですか',kr:'주문 괜찮아요'},
+  {id:102,cat:'food',jp:'もう決まりました',rd:'もうきまりました',kr:'정했어요'},
+  {id:103,cat:'food',jp:'少なめでお願いします',rd:'すくなめでおねがいします',kr:'적게 주세요'},
+  {id:104,cat:'food',jp:'多めでお願いします',rd:'おおめでおねがいします',kr:'많이 주세요'},
+  {id:105,cat:'food',jp:'辛くないですか',rd:'からくないですか',kr:'안 매워요'},
+  {id:106,cat:'food',jp:'ちょっと辛いです',rd:'ちょっとからいです',kr:'조금 매워요'},
+  {id:107,cat:'food',jp:'おいしいです',rd:'おいしいです',kr:'맛있어요'},
+  {id:108,cat:'food',jp:'めっちゃおいしいです',rd:'めっちゃおいしいです',kr:'엄청 맛있어요'},
+  {id:109,cat:'food',jp:'ちょっとしょっぱいです',rd:'ちょっとしょっぱいです',kr:'조금 짜요'},
+  {id:110,cat:'food',jp:'もう一つお願いします',rd:'もうひとつおねがいします',kr:'하나 더 주세요'},
+  {id:111,cat:'food',jp:'すみません、水お願いします',rd:'すみませんみずおねがいします',kr:'물 좀 주세요'},
+  {id:112,cat:'food',jp:'お会計お願いします',rd:'おかいけいおねがいします',kr:'계산해주세요'},
+  {id:113,cat:'food',jp:'カード使えますか',rd:'かーどつかえますか',kr:'카드 되나요'},
+  {id:114,cat:'food',jp:'別々でお願いします',rd:'べつべつでおねがいします',kr:'따로 계산해주세요'},
+  {id:115,cat:'food',jp:'レシートお願いします',rd:'れしーとおねがいします',kr:'영수증 주세요'},
+  {id:116,cat:'food',jp:'ごちそうさまでした',rd:'ごちそうさまでした',kr:'잘 먹었습니다'},
+  {id:141,cat:'shop',jp:'すみません、これありますか',rd:'すみませんこれありますか',kr:'이거 있어요'},
+  {id:142,cat:'shop',jp:'サイズありますか',rd:'さいずありますか',kr:'사이즈 있어요'},
+  {id:143,cat:'shop',jp:'Mサイズありますか',rd:'えむさいずありますか',kr:'M 있어요'},
+  {id:144,cat:'shop',jp:'Lありますか',rd:'えるありますか',kr:'L 있어요'},
+  {id:145,cat:'shop',jp:'もう少し大きいのありますか',rd:'もうすこしおおきいのありますか',kr:'더 큰 거 있어요'},
+  {id:146,cat:'shop',jp:'小さいサイズありますか',rd:'ちいさいさいずありますか',kr:'작은 거 있어요'},
+  {id:147,cat:'shop',jp:'試着いいですか',rd:'しちゃくいいですか',kr:'입어봐도 돼요'},
+  {id:148,cat:'shop',jp:'試着室どこですか',rd:'しちゃくしつどこですか',kr:'피팅룸 어디예요'},
+  {id:149,cat:'shop',jp:'ちょっと大きいです',rd:'ちょっとおおきいです',kr:'좀 커요'},
+  {id:150,cat:'shop',jp:'ちょっと小さいです',rd:'ちょっとちいさいです',kr:'좀 작아요'},
+  {id:151,cat:'shop',jp:'いい感じです',rd:'いいかんじです',kr:'느낌 좋아요'},
+  {id:152,cat:'shop',jp:'ぴったりです',rd:'ぴったりです',kr:'딱 맞아요'},
+  {id:153,cat:'shop',jp:'他の色ありますか',rd:'ほかのいろありますか',kr:'다른 색 있어요'},
+  {id:154,cat:'shop',jp:'黒ありますか',rd:'くろありますか',kr:'검정 있어요'},
+  {id:155,cat:'shop',jp:'白ありますか',rd:'しろありますか',kr:'흰색 있어요'},
+  {id:156,cat:'shop',jp:'女性用どこですか',rd:'じょせいようどこですか',kr:'여성 코너 어디예요'},
+  {id:157,cat:'shop',jp:'メンズどこですか',rd:'めんずどこですか',kr:'남성 코너 어디예요'},
+  {id:158,cat:'shop',jp:'これ人気ですか',rd:'これにんきですか',kr:'이거 인기 있어요'},
+  {id:159,cat:'shop',jp:'よく売れてますか',rd:'よくうれてますか',kr:'잘 팔려요'},
+  {id:160,cat:'shop',jp:'おすすめどれですか',rd:'おすすめどれですか',kr:'추천 뭐예요'},
+  {id:161,cat:'shop',jp:'これにします',rd:'これにします',kr:'이걸로 할게요'},
+  {id:162,cat:'shop',jp:'袋いらないです',rd:'ふくろいらないです',kr:'봉투 필요 없어요'},
+  {id:163,cat:'shop',jp:'袋お願いします',rd:'ふくろおねがいします',kr:'봉투 주세요'},
+  {id:164,cat:'shop',jp:'プレゼントです',rd:'ぷれぜんとです',kr:'선물이에요'},
+  {id:165,cat:'shop',jp:'ラッピングできますか',rd:'らっぴんぐできますか',kr:'포장 되나요'},
+  {id:166,cat:'shop',jp:'いくらですか',rd:'いくらですか',kr:'얼마예요'},
+  {id:167,cat:'shop',jp:'ちょっと高いですね',rd:'ちょっとたかいですね',kr:'좀 비싸네요'},
+  {id:168,cat:'shop',jp:'安いですね',rd:'やすいですね',kr:'싸네요'},
+  {id:169,cat:'shop',jp:'考えます',rd:'かんがえます',kr:'생각해볼게요'},
+  {id:170,cat:'shop',jp:'ちょっと見てるだけです',rd:'ちょっとみてるだけです',kr:'구경만 할게요'},
+  {id:171,cat:'shop',jp:'また来ます',rd:'またきます',kr:'다시 올게요'},
+  {id:172,cat:'shop',jp:'いいお店ですね',rd:'いいおみせですね',kr:'좋은 가게네요'},
+  {id:173,cat:'shop',jp:'店員さん優しいですね',rd:'てんいんさんやさしいですね',kr:'직원 친절하네요'},
+  {id:174,cat:'shop',jp:'これ韓国でも人気です',rd:'これかんこくでもにんきです',kr:'이거 한국에서도 인기예요'},
+  {id:175,cat:'shop',jp:'日本ブランド好きです',rd:'にほんぶらんどすきです',kr:'일본 브랜드 좋아요'},
+  {id:176,cat:'shop',jp:'おすすめありがとうございます',rd:'おすすめありがとうございます',kr:'추천 감사해요'},
+  {id:177,cat:'shop',jp:'助かりました',rd:'たすかりました',kr:'도움됐어요'},
+  {id:178,cat:'shop',jp:'また来ますね',rd:'またきますね',kr:'또 올게요'},
+  {id:179,cat:'shop',jp:'よろしくお願いします',rd:'よろしくおねがいします',kr:'잘 부탁드립니다'},
+];
+const CAT_LABEL={basic:'🛫 기본 / 공항 (1~40)',transport:'🚃 교통 / 길찾기 (41~70)',food:'🍜 음식점 (91~116)',shop:'👕 쇼핑 / 패션 (141~180)'};
+let mode=1,currentCat='all',reviewMode=false,revealAll=false,statuses={};
+(function(){try{statuses=JSON.parse(localStorage.getItem('jp_status')||'{}');}catch(e){}})();
+function save(){localStorage.setItem('jp_status',JSON.stringify(statuses));}
+let activeTTSEl=null,jpVoice=null;
+function loadVoice(){const v=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('ja'));if(!v.length)return;for(const kw of['o-ren','premium','enhanced','kyoko','hattori']){const f=v.find(x=>x.name.toLowerCase().includes(kw));if(f){jpVoice=f;return;}}jpVoice=v[0];}
+speechSynthesis.onvoiceschanged=loadVoice;loadVoice();
+function speak(text,el){speechSynthesis.cancel();if(activeTTSEl)activeTTSEl.classList.remove('speaking');const u=new SpeechSynthesisUtterance(text);u.lang='ja-JP';u.rate=0.85;u.pitch=1.05;if(jpVoice)u.voice=jpVoice;activeTTSEl=el;el.classList.add('speaking');u.onend=u.onerror=()=>el.classList.remove('speaking');speechSynthesis.speak(u);}
+function filtered(){let l=DATA;if(currentCat!=='all')l=l.filter(s=>s.cat===currentCat);if(reviewMode)l=l.filter(s=>statuses[s.id]==='x');return l;}
+function render(){const list=filtered();const el=document.getElementById('cards');if(!list.length){el.innerHTML=`<div class="empty"><div class="em">${reviewMode?'🎉':'🔍'}</div><p>${reviewMode?'틀린 문제가 없어요!<br>다 맞췄네요 👍':'문장이 없어요'}</p></div>`;updateStats();return;}const showH=currentCat==='all'&&!reviewMode;let html='';let lastCat=null;list.forEach(s=>{if(showH&&s.cat!==lastCat){html+=`<div class="cat-header">${CAT_LABEL[s.cat]}</div>`;lastCat=s.cat;}const st=statuses[s.id];const jpSafe=s.jp.replace(/'/g,"\\'");let qHtml,aHtml;if(mode===1){qHtml=`<div class="question">${s.kr}</div>`;aHtml=`<div class="answer-wrap"><button class="reveal-btn" onclick="toggleAns(${s.id},this)">답 보기 ▾</button><div class="answer${revealAll?' show':''}" id="a${s.id}"><span class="jp-text" onclick="speak('${jpSafe}',this)">${s.jp} <span class="spk">🔊</span></span><div class="reading">${s.rd}</div></div></div>`;}else{qHtml=`<div class="question"><span class="jp-text" onclick="speak('${jpSafe}',this)">${s.jp} <span class="spk">🔊</span></span></div>`;aHtml=`<div class="answer-wrap"><button class="reveal-btn" onclick="toggleAns(${s.id},this)">뜻 보기 ▾</button><div class="answer${revealAll?' show':''}" id="a${s.id}">${s.kr}<div class="reading">${s.rd}</div></div></div>`;}html+=`<div class="card${st?' status-'+st:''}" id="c${s.id}"><div class="ox-wrap"><button class="ox-btn o-btn${st==='o'?' selected':''}" onclick="setSt(${s.id},'o')">⭕</button><button class="ox-btn x-btn${st==='x'?' selected':''}" onclick="setSt(${s.id},'x')">❌</button></div><div class="card-content"><div class="card-num">#${s.id}</div>${qHtml}${aHtml}</div></div>`;});el.innerHTML=html;updateStats();}
+function toggleAns(id,btn){const a=document.getElementById('a'+id);const showing=a.classList.toggle('show');btn.textContent=showing?(btn.textContent.includes('답')?'답 닫기 ▴':'뜻 닫기 ▴'):(btn.textContent.includes('답')?'답 보기 ▾':'뜻 보기 ▾');}
+function setSt(id,val){if(statuses[id]===val)delete statuses[id];else statuses[id]=val;save();const card=document.getElementById('c'+id);card.className='card'+(statuses[id]?' status-'+statuses[id]:'');card.querySelector('.o-btn').classList.toggle('selected',statuses[id]==='o');card.querySelector('.x-btn').classList.toggle('selected',statuses[id]==='x');updateStats();if(reviewMode&&statuses[id]==='o'){card.style.transition='opacity .3s, transform .3s';card.style.opacity='0';card.style.transform='translateX(40px)';setTimeout(()=>render(),320);}}
+function updateStats(){const o=DATA.filter(s=>statuses[s.id]==='o').length;const x=DATA.filter(s=>statuses[s.id]==='x').length;document.getElementById('oCount').textContent=o;document.getElementById('xCount').textContent=x;document.getElementById('total').textContent=DATA.length;document.getElementById('prog').style.width=(o/DATA.length*100)+'%';}
+function setMode(m){mode=m;document.getElementById('v1btn').classList.toggle('active',m===1);document.getElementById('v2btn').classList.toggle('active',m===2);revealAll=false;document.getElementById('revealAllBtn').textContent='전체 답 보기';render();}
+function setCat(cat,btn){currentCat=cat;document.querySelectorAll('.filter-btn:not(.review-btn)').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
+function toggleReview(btn){reviewMode=!reviewMode;btn.classList.toggle('active',reviewMode);render();}
+function toggleRevealAll(){revealAll=!revealAll;document.querySelectorAll('.answer').forEach(a=>a.classList.toggle('show',revealAll));document.querySelectorAll('.reveal-btn').forEach(btn=>{btn.textContent=revealAll?(mode===1?'답 닫기 ▴':'뜻 닫기 ▴'):(mode===1?'답 보기 ▾':'뜻 보기 ▾');});document.getElementById('revealAllBtn').textContent=revealAll?'전체 답 숨기기':'전체 답 보기';}
+function resetAll(){if(!confirm('모든 O/X 기록을 초기화할까요?'))return;statuses={};save();render();}
+render();
+</script>
+</body>
+</html>
