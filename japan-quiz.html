@@ -277,10 +277,10 @@ try{statuses=JSON.parse(localStorage.getItem('jp_status')||'{}');}catch(e){}
 _ref1.on('value', snap=>{
   const d=snap.val();
   if(d) statuses=d;
-  render();
+  render(); _syncWrong();
 }, ()=>{
   try{statuses=JSON.parse(localStorage.getItem('jp_status')||'{}');}catch(e){}
-  render();
+  render(); _syncWrong();
 });
 let activeTTSEl=null,jpVoice=null;
 function loadVoice(){const v=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('ja'));if(!v.length)return;for(const kw of['o-ren','premium','enhanced','kyoko','hattori']){const f=v.find(x=>x.name.toLowerCase().includes(kw));if(f){jpVoice=f;return;}}jpVoice=v[0];}

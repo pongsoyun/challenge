@@ -520,7 +520,7 @@ function resetAll(){
 loadState(); render(); // initial render from localStorage
 _ref5.on('value', snap=>{
   const d=snap.val();
-  if(d){ state=d; render(); }
+  if(d){ state=d; render(); _syncWrong(); }
 }, ()=>{});
 
 // ── APP STATUS ──
