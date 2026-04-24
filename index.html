@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>소윤의 일본어 공부</title>
   <link rel="icon" href="soyun.png" type="image/png">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -41,6 +43,18 @@
     .icon { font-size: 36px; flex-shrink: 0; }
     .label { font-size: 16px; font-weight: 800; margin-bottom: 2px; }
     .desc { font-size: 12px; color: #aaa; }
+    .st-badge {
+      margin-left: auto; flex-shrink: 0; text-align: center;
+    }
+    .st-pill {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px;
+      background: #f0f0f0; color: #bbb;
+      white-space: nowrap;
+    }
+    .st-pill.s1 { background: #fff3cd; color: #b8860b; }
+    .st-pill.s2 { background: #d4f5e5; color: #2da56a; }
+    .st-date { font-size: 10px; color: #ccc; margin-top: 3px; }
   </style>
 </head>
 <body>
@@ -67,6 +81,7 @@
         <div class="label">여행회화 퀴즈</div>
         <div class="desc">한→日 / 日→한 · 116문장</div>
       </div>
+      <div class="st-badge" id="st_japanQuiz"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
     <a href="기본일본어표현단어.html">
       <div class="icon">📖</div>
@@ -74,6 +89,7 @@
         <div class="label">기본 일본어 표현·단어</div>
         <div class="desc">기초 표현 & 단어</div>
       </div>
+      <div class="st-badge" id="st_jpWords"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
     <a href="날짜_조수사.html">
       <div class="icon">📅</div>
@@ -81,6 +97,7 @@
         <div class="label">날짜·조수사</div>
         <div class="desc">날짜 읽기 & 조수사</div>
       </div>
+      <div class="st-badge" id="st_jpCounter"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
     <a href="2초결정훈련.html">
       <div class="icon">⚡</div>
@@ -88,6 +105,7 @@
         <div class="label">2초 결정 훈련</div>
         <div class="desc">순간 반사 트레이닝</div>
       </div>
+      <div class="st-badge" id="st_jp2sec"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
     <a href="2~8화 복습.html">
       <div class="icon">🔁</div>
@@ -95,7 +113,37 @@
         <div class="label">2~8화 복습</div>
         <div class="desc">드라마 표현 복습</div>
       </div>
+      <div class="st-badge" id="st_jpVocab"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
   </div>
+
+<script>
+const _ST_LIST=[{icon:'🫥',label:'시작전',cls:''},{icon:'✏️',label:'공부중',cls:'s1'},{icon:'💯',label:'공부완료!',cls:'s2'}];
+const _fbIdx = firebase.initializeApp({
+  apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain:"japanese-challenge.firebaseapp.com",
+  databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"japanese-challenge",
+  storageBucket:"japanese-challenge.firebasestorage.app",
+  messagingSenderId:"731920970316",
+  appId:"1:731920970316:web:f29acf68702da716c6bae9"
+},'index');
+const _dbIdx = firebase.database(_fbIdx);
+
+const APP_KEYS = ['japanQuiz','jpWords','jpCounter','jp2sec','jpVocab'];
+APP_KEYS.forEach(key => {
+  _dbIdx.ref('appStatus/'+key).on('value', snap => {
+    const d = snap.val();
+    const el = document.getElementById('st_'+key);
+    if(!el) return;
+    const idx = d?.idx || 0;
+    const date = d?.date || '';
+    const s = _ST_LIST[idx];
+    el.querySelector('.st-pill').className = 'st-pill' + (s.cls ? ' '+s.cls : '');
+    el.querySelector('.st-pill').textContent = s.icon+' '+s.label;
+    el.querySelector('.st-date').textContent = date;
+  });
+});
+</script>
 </body>
 </html>

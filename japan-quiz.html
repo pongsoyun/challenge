@@ -292,6 +292,19 @@ function toggleReview(btn){reviewMode=!reviewMode;btn.classList.toggle('active',
 function toggleRevealAll(){revealAll=!revealAll;document.querySelectorAll('.answer').forEach(a=>a.classList.toggle('show',revealAll));document.querySelectorAll('.reveal-btn').forEach(btn=>{btn.textContent=revealAll?(mode===1?'답 닫기 ▴':'뜻 닫기 ▴'):(mode===1?'답 보기 ▾':'뜻 보기 ▾');});document.getElementById('revealAllBtn').textContent=revealAll?'전체 답 숨기기':'전체 답 보기';}
 function resetAll(){if(!confirm('모든 O/X 기록을 초기화할까요?'))return;statuses={};save();render();}
 // render() is called by Firebase onValue listener above
+
+// ── APP STATUS ──
+const _ST_LIST=[{icon:'🫥',label:'시작전'},{icon:'✏️',label:'공부중'},{icon:'💯',label:'공부완료!'}];
+const _stRef1=_db1.ref('appStatus/japanQuiz');
+let _appSt1={idx:0,date:''};
+_stRef1.on('value',snap=>{const d=snap.val();if(d){_appSt1=d;_updateSt();}});
+function _kstDate(){const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));return`${n.getMonth()+1}/${n.getDate()}`;}
+function _cycleSt(){_appSt1={idx:((_appSt1.idx||0)+1)%3,date:_kstDate()};_stRef1.set(_appSt1);_updateSt();}
+function _updateSt(){const s=_ST_LIST[_appSt1.idx||0];document.getElementById('_stBtn').textContent=`${s.icon} ${s.label}`;document.getElementById('_stDate').textContent=_appSt1.date||'';}
 </script>
+<div style="position:fixed;bottom:16px;right:16px;z-index:9999;text-align:center;">
+  <button id="_stBtn" onclick="_cycleSt()" style="border:none;border-radius:20px;padding:8px 14px;font-size:13px;font-weight:700;background:rgba(255,255,255,.95);box-shadow:0 2px 12px rgba(0,0,0,.15);cursor:pointer;white-space:nowrap;">🫥 시작전</button>
+  <div id="_stDate" style="font-size:11px;color:#aaa;margin-top:3px;"></div>
+</div>
 </body>
 </html>
