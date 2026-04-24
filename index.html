@@ -159,11 +159,17 @@ function setFilter(f, btn) {
   applyFilter();
 }
 
+const ST_ORDER = {1: 0, 0: 1, 2: 2}; // 공부중 > 시작전 > 공부완료
+
 function applyFilter() {
-  document.querySelectorAll('.card-item').forEach(card => {
+  const container = document.querySelector('.cards:last-of-type');
+  const cards = [...document.querySelectorAll('.card-item')];
+  cards.forEach(card => {
     const st = parseInt(card.dataset.st || '0');
     card.classList.toggle('hidden', activeFilter !== 0 && st !== activeFilter);
   });
+  cards.sort((a, b) => ST_ORDER[parseInt(a.dataset.st||0)] - ST_ORDER[parseInt(b.dataset.st||0)]);
+  cards.forEach(card => container.appendChild(card));
 }
 
 const APP_KEYS = ['japanQuiz','jpWords','jpCounter','jp2sec','jpVocab'];
