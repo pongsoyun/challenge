@@ -55,6 +55,20 @@
     .st-pill.s1 { background: #fff3cd; color: #b8860b; }
     .st-pill.s2 { background: #d4f5e5; color: #2da56a; }
     .st-date { font-size: 10px; color: #ccc; margin-top: 3px; }
+    .filter-bar {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      width: 100%; max-width: 320px;
+      margin: 0 0 12px;
+    }
+    .f-btn {
+      border: none; border-radius: 20px; padding: 6px 12px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,.7); color: #999;
+      transition: all .15s;
+    }
+    .f-btn.active { background: white; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .card-item { transition: opacity .2s; }
+    .card-item.hidden { display: none; }
   </style>
 </head>
 <body>
@@ -74,8 +88,14 @@
   </div>
 
   <div class="section-label">일본어 퀴즈</div>
+  <div class="filter-bar">
+    <button class="f-btn active" onclick="setFilter(0,this)">전체</button>
+    <button class="f-btn" onclick="setFilter(1,this)">🫥 시작전</button>
+    <button class="f-btn" onclick="setFilter(2,this)">✏️ 공부중</button>
+    <button class="f-btn" onclick="setFilter(3,this)">💯 공부완료!</button>
+  </div>
   <div class="cards">
-    <a href="japan-quiz.html">
+    <a href="japan-quiz.html" class="card-item" data-key="japanQuiz" data-st="0">
       <div class="icon">🇯🇵</div>
       <div>
         <div class="label">여행회화 퀴즈</div>
@@ -83,7 +103,7 @@
       </div>
       <div class="st-badge" id="st_japanQuiz"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
-    <a href="기본일본어표현단어.html">
+    <a href="기본일본어표현단어.html" class="card-item" data-key="jpWords" data-st="0">
       <div class="icon">📖</div>
       <div>
         <div class="label">기본 일본어 표현·단어</div>
@@ -91,7 +111,7 @@
       </div>
       <div class="st-badge" id="st_jpWords"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
-    <a href="날짜_조수사.html">
+    <a href="날짜_조수사.html" class="card-item" data-key="jpCounter" data-st="0">
       <div class="icon">📅</div>
       <div>
         <div class="label">날짜·조수사</div>
@@ -99,7 +119,7 @@
       </div>
       <div class="st-badge" id="st_jpCounter"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
-    <a href="2초결정훈련.html">
+    <a href="2초결정훈련.html" class="card-item" data-key="jp2sec" data-st="0">
       <div class="icon">⚡</div>
       <div>
         <div class="label">2초 결정 훈련</div>
@@ -107,7 +127,7 @@
       </div>
       <div class="st-badge" id="st_jp2sec"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
-    <a href="2~8화 복습.html">
+    <a href="2~8화 복습.html" class="card-item" data-key="jpVocab" data-st="0">
       <div class="icon">🔁</div>
       <div>
         <div class="label">2~8화 복습</div>
@@ -130,6 +150,22 @@ const _fbIdx = firebase.initializeApp({
 },'index');
 const _dbIdx = firebase.database(_fbIdx);
 
+let activeFilter = 0;
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  document.querySelectorAll('.card-item').forEach(card => {
+    const st = parseInt(card.dataset.st || '0');
+    card.classList.toggle('hidden', activeFilter !== 0 && st !== activeFilter);
+  });
+}
+
 const APP_KEYS = ['japanQuiz','jpWords','jpCounter','jp2sec','jpVocab'];
 APP_KEYS.forEach(key => {
   _dbIdx.ref('appStatus/'+key).on('value', snap => {
@@ -142,6 +178,9 @@ APP_KEYS.forEach(key => {
     el.querySelector('.st-pill').className = 'st-pill' + (s.cls ? ' '+s.cls : '');
     el.querySelector('.st-pill').textContent = s.icon+' '+s.label;
     el.querySelector('.st-date').textContent = date;
+    // update data-st on parent card for filtering
+    const card = el.closest('.card-item');
+    if(card) { card.dataset.st = idx; applyFilter(); }
   });
 });
 </script>
