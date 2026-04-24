@@ -291,6 +291,11 @@ function loadState(){ try{ state = JSON.parse(localStorage.getItem('jpvocab')||'
 function saveState(){
   _ref5.set(state).catch(()=>{});
   localStorage.setItem('jpvocab', JSON.stringify(state));
+  _syncWrong();
+}
+function _syncWrong(){
+  const items=VOCAB.filter(v=>state[v.id]&&state[v.id].pick!==undefined&&state[v.id].pick!==v.meaning).map(v=>({id:v.id,q:v.meaning,a:v.wordPlain,r:v.wordPlain}));
+  _db5.ref('wrongAnswers/jpVocab').set(items.length?{appName:'2~8화 복습',emoji:'🔁',items}:null).catch(()=>{});
 }
 
 // ── TTS ───────────────────────────────────────────────────────────

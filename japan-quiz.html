@@ -266,6 +266,11 @@ let mode=1,currentCat='all',reviewMode=false,revealAll=false,statuses={};
 function save(){
   _ref1.set(statuses).catch(()=>{});
   localStorage.setItem('jp_status',JSON.stringify(statuses));
+  _syncWrong();
+}
+function _syncWrong(){
+  const items=DATA.filter(s=>statuses[s.id]==='x').map(s=>({id:s.id,q:s.kr,a:s.jp,r:s.rd}));
+  _db1.ref('wrongAnswers/japanQuiz').set(items.length?{appName:'여행회화 퀴즈',emoji:'🇯🇵',items}:null).catch(()=>{});
 }
 // initial load from Firebase (fallback: localStorage)
 try{statuses=JSON.parse(localStorage.getItem('jp_status')||'{}');}catch(e){}

@@ -284,6 +284,11 @@ function loadState(){
 function saveState(){
   _ref4.set(state).catch(()=>{});
   localStorage.setItem('jp2sec', JSON.stringify(state));
+  _syncWrong();
+}
+function _syncWrong(){
+  const items=Q.filter(q=>state[q.n]&&state[q.n].pick!==undefined&&state[q.n].pick!==q.a).map(q=>({id:q.n,q:q.sit,a:q.c[q.a],r:q.ex}));
+  _db4.ref('wrongAnswers/jp2sec').set(items.length?{appName:'2초 결정 훈련',emoji:'⚡',items}:null).catch(()=>{});
 }
 
 // ── RENDER ───────────────────────────────────────────────────────

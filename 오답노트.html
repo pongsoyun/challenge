@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>📝 오답노트</title>
+<link rel="icon" href="soyun.png" type="image/png">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#fff8f5;color:#333;min-height:100vh;padding-bottom:60px}
+header{background:linear-gradient(135deg,#ff9eb5,#ff6b95);color:#fff;padding:16px;text-align:center;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+header h1{font-size:1.1rem;font-weight:800}
+.summary{font-size:.78rem;margin-top:4px;opacity:.9}
+.empty-state{text-align:center;padding:80px 20px;color:#ccc}
+.empty-state .em{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:.9rem;line-height:1.6}
+.app-section{margin:14px 14px 0}
+.app-title{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:800;color:#bbb;letter-spacing:.3px;margin-bottom:8px;cursor:pointer;user-select:none}
+.app-title .cnt{background:#ff6b95;color:#fff;font-size:.7rem;padding:2px 7px;border-radius:10px}
+.app-title .toggle{margin-left:auto;font-size:.8rem}
+.items{display:flex;flex-direction:column;gap:8px}
+.items.collapsed{display:none}
+.card{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:4px solid #ff6b95}
+.card-q{font-size:.85rem;color:#888;margin-bottom:6px}
+.card-a{display:flex;align-items:center;gap:10px}
+.card-ja{font-size:1.15rem;font-weight:700;color:#333;flex:1}
+.card-r{font-size:.75rem;color:#aaa;margin-top:3px}
+.tts-btn{border:none;background:#ffe0ea;border-radius:50%;width:32px;height:32px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tts-btn.playing{background:#ff6b95;color:#fff}
+.total-bar{margin:14px 14px 0;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;justify-content:space-between;align-items:center}
+.total-bar .t-label{font-size:.82rem;color:#888;font-weight:700}
+.total-bar .t-count{font-size:1.4rem;font-weight:900;color:#ff6b95}
+</style>
+</head>
+<body>
+<header>
+  <h1>📝 오답노트</h1>
+  <div class="summary" id="summary">불러오는 중...</div>
+</header>
+<div id="root"></div>
+
+<script>
+const _fbWrong = firebase.initializeApp({
+  apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain:"japanese-challenge.firebaseapp.com",
+  databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"japanese-challenge",
+  storageBucket:"japanese-challenge.firebasestorage.app",
+  messagingSenderId:"731920970316",
+  appId:"1:731920970316:web:f29acf68702da716c6bae9"
+},'wrong');
+const _dbW = firebase.database(_fbWrong);
+
+let currentAudio = null;
+function speak(text, btn) {
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  document.querySelectorAll('.tts-btn.playing').forEach(b=>b.classList.remove('playing'));
+  if(btn) btn.classList.add('playing');
+  const url='https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=gtx&q='+encodeURIComponent(text);
+  const audio=new Audio(url);
+  currentAudio=audio;
+  audio.onended=()=>{if(btn)btn.classList.remove('playing');currentAudio=null;};
+  audio.onerror=()=>{
+    if(btn)btn.classList.remove('playing');
+    const u=new SpeechSynthesisUtterance(text);u.lang='ja-JP';u.rate=0.85;speechSynthesis.speak(u);
+  };
+  audio.play().catch(()=>audio.onerror&&audio.onerror());
+}
+
+function toggleSection(id) {
+  const el = document.getElementById('items_'+id);
+  const icon = document.getElementById('icon_'+id);
+  el.classList.toggle('collapsed');
+  icon.textContent = el.classList.contains('collapsed') ? '▶' : '▼';
+}
+
+_dbW.ref('wrongAnswers').on('value', snap => {
+  const data = snap.val();
+  const root = document.getElementById('root');
+
+  if(!data) {
+    root.innerHTML = '<div class="empty-state"><div class="em">🎉</div><p>아직 틀린 문제가 없어요!<br>퀴즈를 풀면 오답이 여기 모여요.</p></div>';
+    document.getElementById('summary').textContent = '틀린 문제 없음';
+    return;
+  }
+
+  // 각 앱의 데이터 - Firebase가 자동으로 수집 (새 앱 추가해도 자동 반영)
+  const apps = Object.entries(data).filter(([,v])=>v&&v.items&&v.items.length);
+  const total = apps.reduce((s,[,v])=>s+(v.items?.length||0),0);
+
+  document.getElementById('summary').textContent = `총 ${total}개 오답`;
+
+  let html = `<div class="total-bar"><span class="t-label">전체 오답</span><span class="t-count">${total}개</span></div>`;
+
+  apps.forEach(([key, app]) => {
+    const items = app.items || [];
+    html += `
+    <div class="app-section">
+      <div class="app-title" onclick="toggleSection('${key}')">
+        <span>${app.emoji||'📚'} ${app.appName}</span>
+        <span class="cnt">${items.length}개</span>
+        <span class="toggle" id="icon_${key}">▼</span>
+      </div>
+      <div class="items" id="items_${key}">
+        ${items.map(item=>`
+        <div class="card">
+          <div class="card-q">${item.q}</div>
+          <div class="card-a">
+            <div>
+              <div class="card-ja">${item.a}</div>
+              ${item.r&&item.r!==item.a?`<div class="card-r">${item.r}</div>`:''}
+            </div>
+            <button class="tts-btn" onclick="speak('${(item.r||item.a).replace(/'/g,"\\'")}',this)">🔊</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  root.innerHTML = html;
+});
+</script>
+</body>
+</html>

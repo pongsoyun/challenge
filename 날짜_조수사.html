@@ -287,6 +287,11 @@ function loadState(){
 function saveState(){
   _ref3.set(state).catch(()=>{});
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  _syncWrong();
+}
+function _syncWrong(){
+  const items=VOCAB.filter(v=>state[v.id]&&state[v.id].correct===false&&!state[v.id].mastered).map(v=>({id:v.id,q:v.kr,a:v.ja,r:v.reading}));
+  _db3.ref('wrongAnswers/jpCounter').set(items.length?{appName:'날짜·조수사',emoji:'📅',items}:null).catch(()=>{});
 }
 
 // ─── CHOICE GENERATION ────────────────────────────────────────────────────────
