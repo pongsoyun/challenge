@@ -198,21 +198,41 @@ function _syncWrong(){
 }
 
 // ── TTS ──
+let _voices = [];
+speechSynthesis.onvoiceschanged = () => { _voices = speechSynthesis.getVoices(); };
+_voices = speechSynthesis.getVoices();
+
+function _bestJpVoice(){
+  const vl = _voices.filter(v => v.lang.startsWith('ja'));
+  return vl.find(v => /o.?ren/i.test(v.name))       // Mac: O-Ren (가장 자연스러움)
+    || vl.find(v => /premium/i.test(v.name))
+    || vl.find(v => /enhanced/i.test(v.name))
+    || vl.find(v => /kyoko/i.test(v.name))
+    || vl[0];
+}
+
 function speak(text, btn) {
   if(currentAudio){ currentAudio.pause(); currentAudio=null; }
   document.querySelectorAll('.tts-btn.playing').forEach(b=>b.classList.remove('playing'));
   if(btn) btn.classList.add('playing');
-  const url='https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=gtx&q='+encodeURIComponent(text);
+
+  function fallback(){
+    if(btn) btn.classList.remove('playing');
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP';
+    u.rate = 0.9;
+    u.pitch = 1;
+    const best = _bestJpVoice();
+    if(best) u.voice = best;
+    speechSynthesis.speak(u);
+  }
+
+  const url = 'https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=' + encodeURIComponent(text);
   const audio = new Audio(url);
   currentAudio = audio;
-  audio.playbackRate = 0.9;
   audio.onended = ()=>{ if(btn) btn.classList.remove('playing'); currentAudio=null; };
-  audio.onerror = ()=>{
-    if(btn) btn.classList.remove('playing');
-    const u = new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=0.85;
-    speechSynthesis.speak(u);
-  };
-  audio.play().catch(()=>audio.onerror&&audio.onerror());
+  audio.onerror = fallback;
+  audio.play().catch(fallback);
 }
 
 // ── MODE ──
