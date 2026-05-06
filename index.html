@@ -146,6 +146,14 @@
       </div>
       <div class="st-badge" id="st_jpVocab"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
     </a>
+    <a href="이형용사_퀴즈.html" class="card-item" data-key="iAdj" data-st="0">
+      <div class="icon">📐</div>
+      <div>
+        <div class="label">い형용사 퀴즈</div>
+        <div class="desc">8~11강 · 한국어↔일본어 48문제</div>
+      </div>
+      <div class="st-badge" id="st_iAdj"><div class="st-pill">🫥 시작전</div><div class="st-date"></div></div>
+    </a>
   </div>
 
 <script>
@@ -183,7 +191,7 @@ function applyFilter() {
   cards.forEach(card => container.appendChild(card));
 }
 
-const APP_KEYS = ['japanQuiz','jpWords','jpCounter','jp2sec','jpVocab'];
+const APP_KEYS = ['japanQuiz','jpWords','jpCounter','jp2sec','jpVocab','iAdj'];
 APP_KEYS.forEach(key => {
   _dbIdx.ref('appStatus/'+key).on('value', snap => {
     const d = snap.val();

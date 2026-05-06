@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>い형용사 퀴즈</title>
+<link rel="icon" href="soyun.png" type="image/png">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f4ff;color:#333;min-height:100vh}
+header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+header h1{font-size:1rem;font-weight:800;text-align:center;margin-bottom:8px}
+.mode-bar{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
+.mode-btn{border:2px solid rgba(255,255,255,.5);background:transparent;color:rgba(255,255,255,.8);border-radius:20px;padding:5px 14px;font-size:.8rem;font-weight:700;cursor:pointer}
+.mode-btn.active{background:#fff;color:#667eea}
+.progress-bar-wrap{background:rgba(255,255,255,.3);border-radius:99px;height:5px;margin-top:4px}
+.progress-bar{height:5px;border-radius:99px;background:#fff;transition:width .4s}
+.progress-label{font-size:.72rem;text-align:center;margin-top:4px;opacity:.85}
+.filters{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 4px;justify-content:center}
+.filter-btn{border:none;border-radius:20px;padding:5px 12px;font-size:.75rem;cursor:pointer;font-weight:700;background:#e0e7ff;color:#667eea}
+.filter-btn.active{background:#667eea;color:#fff}
+.status-filters{display:flex;gap:6px;padding:4px 12px 8px;justify-content:center;flex-wrap:wrap}
+.status-btn{border:none;border-radius:20px;padding:4px 10px;font-size:.72rem;cursor:pointer;background:#e8e8f0;color:#888;font-weight:600}
+.status-btn.active{background:#764ba2;color:#fff}
+.stats{display:flex;gap:8px;padding:0 12px 8px;justify-content:center;font-size:.75rem;color:#888}
+.stats span{background:#fff;padding:3px 9px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stats span b{color:#667eea}
+.card-list{padding:0 12px 100px;display:flex;flex-direction:column;gap:10px}
+.card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);border:2px solid transparent;transition:border-color .2s}
+.card.correct{border-color:#4caf50}
+.card.wrong{border-color:#f44336}
+.card.mastered{opacity:.55}
+.card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.card-num{font-size:.68rem;color:#bbb;min-width:22px}
+.card-cat{font-size:.68rem;background:#e0e7ff;color:#667eea;padding:2px 7px;border-radius:10px;font-weight:700}
+.master-btn{margin-left:auto;font-size:1rem;background:none;border:none;cursor:pointer}
+.q-wrap{text-align:center;padding:8px 0 14px}
+.q-jp{font-size:1.3rem;font-weight:700;color:#333;line-height:1.6}
+.q-jp ruby{font-size:1.3rem}
+.q-jp ruby rt{font-size:.55rem;color:#888}
+.q-kr{font-size:1.1rem;font-weight:700;color:#333}
+.tts-btn{border:none;background:#e0e7ff;border-radius:50%;width:30px;height:30px;font-size:.85rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;flex-shrink:0;vertical-align:middle}
+.tts-btn.playing{background:#667eea;color:#fff}
+.choices{display:flex;flex-direction:column;gap:6px}
+.choice-btn{border:2px solid #eee;background:#fafafa;border-radius:10px;padding:10px 12px;font-size:.88rem;font-weight:600;cursor:pointer;color:#444;transition:all .15s;text-align:left;line-height:1.4}
+.choice-btn:active{transform:scale(.98)}
+.choice-btn.correct-ans{background:#e8f5e9;border-color:#4caf50;color:#2e7d32}
+.choice-btn.wrong-ans{background:#ffebee;border-color:#f44336;color:#c62828}
+.choice-btn.show-correct{background:#e8f5e9;border-color:#4caf50;color:#2e7d32}
+.choice-btn:disabled{cursor:default}
+.ans-area{display:none;margin-top:10px;padding-top:10px;border-top:1px solid #e8ecff;font-size:.82rem;color:#888}
+.ans-area.show{display:block}
+.ans-jp{font-size:1rem;font-weight:700;color:#333;margin-bottom:2px}
+.ans-jp ruby rt{font-size:.5rem;color:#888}
+.empty{text-align:center;padding:60px 20px;color:#bbb;font-size:.9rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>🈶 い형용사 퀴즈</h1>
+  <div class="mode-bar">
+    <button id="m1btn" class="mode-btn active" onclick="setMode(1)">🇯🇵 → 🇰🇷</button>
+    <button id="m2btn" class="mode-btn" onclick="setMode(2)">🇰🇷 → 🇯🇵</button>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="progBar"></div></div>
+  <div class="progress-label" id="progLabel">0 / 0 완료</div>
+</header>
+<div class="filters" id="catFilters"></div>
+<div class="status-filters" id="statusFilters"></div>
+<div class="stats" id="stats"></div>
+<div class="card-list" id="cardList"></div>
+
+<script>
+const DATA = [
+  // 8강 부정형 (~くないですか)
+  {id:1,cat:'8강 부정형',jpDisp:'かわいくないですか',jpPlain:'かわいくないですか',kr:'귀엽지 않아요?'},
+  {id:2,cat:'8강 부정형',jpDisp:'<ruby>暗<rt>くら</rt></ruby>くないですか',jpPlain:'暗くないですか',kr:'어둡지 않아요?'},
+  {id:3,cat:'8강 부정형',jpDisp:'<ruby>面白<rt>おもしろ</rt></ruby>くないですか',jpPlain:'面白くないですか',kr:'재밌지 않아요?'},
+  {id:4,cat:'8강 부정형',jpDisp:'<ruby>遅<rt>おそ</rt></ruby>くないですか',jpPlain:'遅くないですか',kr:'느리지 않아요?'},
+  {id:5,cat:'8강 부정형',jpDisp:'<ruby>冷<rt>つめ</rt></ruby>たくないですか',jpPlain:'冷たくないですか',kr:'차갑지 않아요?'},
+  {id:6,cat:'8강 부정형',jpDisp:'<ruby>辛<rt>から</rt></ruby>くないですか',jpPlain:'辛くないですか',kr:'맵지 않아요?'},
+  {id:7,cat:'8강 부정형',jpDisp:'<ruby>寂<rt>さび</rt></ruby>しくないですか',jpPlain:'寂しくないですか',kr:'외롭지 않아요?'},
+  {id:8,cat:'8강 부정형',jpDisp:'<ruby>大<rt>おお</rt></ruby>きくないですか',jpPlain:'大きくないですか',kr:'크지 않아요?'},
+  // 8강 예문
+  {id:9,cat:'8강 예문',jpDisp:'<ruby>英語<rt>えいご</rt></ruby>は<ruby>難<rt>むずか</rt></ruby>しくないですか',jpPlain:'英語は難しくないですか',kr:'영어는 어렵지 않아요?'},
+  {id:10,cat:'8강 예문',jpDisp:'このすいか、<ruby>大<rt>おお</rt></ruby>きくないですか',jpPlain:'このすいか、大きくないですか',kr:'이 수박, 크지 않아요?'},
+  {id:11,cat:'8강 예문',jpDisp:'<ruby>飲<rt>の</rt></ruby>み<ruby>会<rt>かい</rt></ruby>の<ruby>雰囲気<rt>ふんいき</rt></ruby>、<ruby>暗<rt>くら</rt></ruby>くないですか',jpPlain:'飲み会の雰囲気、暗くないですか',kr:'회식 분위기 어둡지 않아요?'},
+  {id:12,cat:'8강 예문',jpDisp:'このパスタ、ちょっとまずくないですか',jpPlain:'このパスタ、ちょっとまずくないですか',kr:'이 파스타, 조금 맛없지 않아요?'},
+  // 9강 명사수식
+  {id:13,cat:'9강 명사수식',jpDisp:'<ruby>寒<rt>さむ</rt></ruby>い<ruby>冬<rt>ふゆ</rt></ruby>',jpPlain:'寒い冬',kr:'추운 겨울'},
+  {id:14,cat:'9강 명사수식',jpDisp:'<ruby>優<rt>やさ</rt></ruby>しい<ruby>人<rt>ひと</rt></ruby>',jpPlain:'優しい人',kr:'상냥한 사람'},
+  {id:15,cat:'9강 명사수식',jpDisp:'<ruby>広<rt>ひろ</rt></ruby>い<ruby>部屋<rt>へや</rt></ruby>',jpPlain:'広い部屋',kr:'넓은 방'},
+  {id:16,cat:'9강 명사수식',jpDisp:'<ruby>忙<rt>いそが</rt></ruby>しい<ruby>店<rt>みせ</rt></ruby>',jpPlain:'忙しい店',kr:'바쁜 가게'},
+  {id:17,cat:'9강 명사수식',jpDisp:'おいしい<ruby>料理<rt>りょうり</rt></ruby>',jpPlain:'おいしい料理',kr:'맛있는 요리'},
+  {id:18,cat:'9강 명사수식',jpDisp:'かわいい<ruby>彼女<rt>かのじょ</rt></ruby>',jpPlain:'かわいい彼女',kr:'귀여운 그녀'},
+  {id:19,cat:'9강 명사수식',jpDisp:'おいしくないリンゴ',jpPlain:'おいしくないリンゴ',kr:'맛있지 않은 사과'},
+  {id:20,cat:'9강 명사수식',jpDisp:'<ruby>怖<rt>こわ</rt></ruby>くない<ruby>先生<rt>せんせい</rt></ruby>',jpPlain:'怖くない先生',kr:'무섭지 않은 선생님'},
+  {id:21,cat:'9강 명사수식',jpDisp:'<ruby>高<rt>たか</rt></ruby>くない<ruby>山<rt>やま</rt></ruby>',jpPlain:'高くない山',kr:'높지 않은 산'},
+  {id:22,cat:'9강 명사수식',jpDisp:'<ruby>甘<rt>あま</rt></ruby>くないケーキ',jpPlain:'甘くないケーキ',kr:'달지 않은 케이크'},
+  {id:23,cat:'9강 명사수식',jpDisp:'<ruby>楽<rt>たの</rt></ruby>しくない<ruby>時間<rt>じかん</rt></ruby>',jpPlain:'楽しくない時間',kr:'즐겁지 않은 시간'},
+  // 10강 연결형
+  {id:24,cat:'10강 연결형',jpDisp:'コーラは<ruby>甘<rt>あま</rt></ruby>くておいしいです',jpPlain:'コーラは甘くておいしいです',kr:'콜라는 달고 맛있어요'},
+  {id:25,cat:'10강 연결형',jpDisp:'<ruby>彼氏<rt>かれし</rt></ruby>は<ruby>背<rt>せ</rt></ruby>が<ruby>高<rt>たか</rt></ruby>くて<ruby>優<rt>やさ</rt></ruby>しいです',jpPlain:'彼氏は背が高くて優しいです',kr:'남자 친구는 키가 크고 상냥해요'},
+  {id:26,cat:'10강 연결형',jpDisp:'<ruby>明<rt>あか</rt></ruby>るくて<ruby>広<rt>ひろ</rt></ruby>い<ruby>部屋<rt>へや</rt></ruby>です',jpPlain:'明るくて広い部屋です',kr:'밝고 넓은 방이에요'},
+  {id:27,cat:'10강 연결형',jpDisp:'<ruby>田中<rt>たなか</rt></ruby>さんは<ruby>顔<rt>かお</rt></ruby>が<ruby>小<rt>ちい</rt></ruby>さくて<ruby>目<rt>め</rt></ruby>が<ruby>大<rt>おお</rt></ruby>きいです',jpPlain:'田中さんは顔が小さくて目が大きいです',kr:'타나까 씨는 얼굴이 작고 눈이 커요'},
+  {id:28,cat:'10강 연결형',jpDisp:'このパソコンは<ruby>高<rt>たか</rt></ruby>いですが、<ruby>速<rt>はや</rt></ruby>くていいです',jpPlain:'このパソコンは高いですが、速くていいです',kr:'이 컴퓨터는 비싸지만, 빠르고 좋아요'},
+  {id:29,cat:'10강 연결형',jpDisp:'この<ruby>店<rt>みせ</rt></ruby>はおいしくて<ruby>人<rt>ひと</rt></ruby>が<ruby>多<rt>おお</rt></ruby>いです',jpPlain:'この店はおいしくて人が多いです',kr:'이 가게는 맛있어서 사람이 많습니다'},
+  {id:30,cat:'10강 연결형',jpDisp:'<ruby>彼女<rt>かのじょ</rt></ruby>はかわいくて、<ruby>人気<rt>にんき</rt></ruby>です',jpPlain:'彼女はかわいくて、人気です',kr:'그녀는 귀여워서 인기예요'},
+  {id:31,cat:'10강 연결형',jpDisp:'この<ruby>道<rt>みち</rt></ruby>は<ruby>暗<rt>くら</rt></ruby>くて<ruby>危<rt>あぶ</rt></ruby>ないです',jpPlain:'この道は暗くて危ないです',kr:'이 길은 어두워서 위험해요'},
+  // 11강 과거형 기본
+  {id:32,cat:'11강 과거형',jpDisp:'おいしかった',jpPlain:'おいしかった',kr:'맛있었어'},
+  {id:33,cat:'11강 과거형',jpDisp:'<ruby>難<rt>むずか</rt></ruby>しかった',jpPlain:'難しかった',kr:'어려웠어'},
+  {id:34,cat:'11강 과거형',jpDisp:'<ruby>暑<rt>あつ</rt></ruby>かった',jpPlain:'暑かった',kr:'더웠어'},
+  {id:35,cat:'11강 과거형',jpDisp:'<ruby>面白<rt>おもしろ</rt></ruby>かった',jpPlain:'面白かった',kr:'재밌었어'},
+  {id:36,cat:'11강 과거형',jpDisp:'<ruby>忙<rt>いそが</rt></ruby>しかった',jpPlain:'忙しかった',kr:'바빴어'},
+  {id:37,cat:'11강 과거형',jpDisp:'<ruby>楽<rt>たの</rt></ruby>しかった',jpPlain:'楽しかった',kr:'즐거웠어'},
+  {id:38,cat:'11강 과거형',jpDisp:'<ruby>近<rt>ちか</rt></ruby>かった',jpPlain:'近かった',kr:'가까웠어'},
+  {id:39,cat:'11강 과거형',jpDisp:'<ruby>良<rt>よ</rt></ruby>かった',jpPlain:'良かった',kr:'좋았어, 다행이야'},
+  // 11강 과거형 예문
+  {id:40,cat:'11강 예문',jpDisp:'<ruby>去年<rt>きょねん</rt></ruby>の<ruby>冬<rt>ふゆ</rt></ruby>は<ruby>寒<rt>さむ</rt></ruby>かった',jpPlain:'去年の冬は寒かった',kr:'작년 겨울은 추웠어'},
+  {id:41,cat:'11강 예문',jpDisp:'<ruby>先週<rt>せんしゅう</rt></ruby>はとても<ruby>忙<rt>いそが</rt></ruby>しかった',jpPlain:'先週はとても忙しかった',kr:'지난주는 매우 바빴어'},
+  {id:42,cat:'11강 예문',jpDisp:'<ruby>天気<rt>てんき</rt></ruby>が<ruby>良<rt>よ</rt></ruby>くてよかった',jpPlain:'天気が良くてよかった',kr:'날씨가 좋아서 다행이야'},
+  {id:43,cat:'11강 예문',jpDisp:'あの<ruby>映画<rt>えいが</rt></ruby>は<ruby>本当<rt>ほんとう</rt></ruby>に<ruby>面白<rt>おもしろ</rt></ruby>かった',jpPlain:'あの映画は本当に面白かった',kr:'저 영화는 정말 재밌었어'},
+  {id:44,cat:'11강 예문',jpDisp:'<ruby>昨日<rt>きのう</rt></ruby>のテストはちょっと<ruby>難<rt>むずか</rt></ruby>しかった',jpPlain:'昨日のテストはちょっと難しかった',kr:'어제 시험은 좀 어려웠어'},
+  {id:45,cat:'11강 예문',jpDisp:'とても<ruby>楽<rt>たの</rt></ruby>しかったよ',jpPlain:'とても楽しかったよ',kr:'엄청 즐거웠어'},
+  // 11강 과거+명사
+  {id:46,cat:'11강 과거+명사',jpDisp:'おいしかった<ruby>店<rt>みせ</rt></ruby>',jpPlain:'おいしかった店',kr:'맛있었던 가게'},
+  {id:47,cat:'11강 과거+명사',jpDisp:'<ruby>怖<rt>こわ</rt></ruby>かった<ruby>先生<rt>せんせい</rt></ruby>',jpPlain:'怖かった先生',kr:'무서웠던 선생님'},
+  {id:48,cat:'11강 과거+명사',jpDisp:'<ruby>面白<rt>おもしろ</rt></ruby>かったドラマ',jpPlain:'面白かったドラマ',kr:'재밌었던 드라마'},
+];
+
+// 시드 기반 셔플 (문제가 항상 같은 순서로 섞이도록)
+function seededShuffle(arr, seed) {
+  const a = [...arr];
+  let s = seed;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+const SHUFFLED = seededShuffle(DATA, 42);
+
+function seededRand(seed){ return ((seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; }
+
+function buildChoices(v) {
+  const sameCat = DATA.filter(x => x.id !== v.id && x.cat === v.cat);
+  const other = DATA.filter(x => x.id !== v.id && x.cat !== v.cat);
+  const pool = sameCat.length >= 2 ? sameCat : [...sameCat, ...other];
+  let s1 = Math.floor(seededRand(v.id * 7 + 3) * pool.length);
+  let s2 = Math.floor(seededRand(v.id * 13 + 5) * pool.length);
+  if (s2 === s1) s2 = (s2 + 1) % pool.length;
+  const choices = [
+    {id: v.id, kr: v.kr, jpPlain: v.jpPlain, jpDisp: v.jpDisp, correct: true},
+    {id: pool[s1].id, kr: pool[s1].kr, jpPlain: pool[s1].jpPlain, jpDisp: pool[s1].jpDisp, correct: false},
+    {id: pool[s2].id, kr: pool[s2].kr, jpPlain: pool[s2].jpPlain, jpDisp: pool[s2].jpDisp, correct: false},
+  ];
+  let s = v.id;
+  for (let i = choices.length - 1; i > 0; i--) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    [choices[i], choices[s % (i + 1)]] = [choices[s % (i + 1)], choices[i]];
+  }
+  return choices;
+}
+
+// ── Firebase ──
+const _fbApp6 = firebase.initializeApp({
+  apiKey:"AIzaSyASL2cZWCbAN0sHiWt2cMsqgbevfwB5AdI",
+  authDomain:"japanese-challenge.firebaseapp.com",
+  databaseURL:"https://japanese-challenge-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"japanese-challenge",
+  storageBucket:"japanese-challenge.firebasestorage.app",
+  messagingSenderId:"731920970316",
+  appId:"1:731920970316:web:f29acf68702da716c6bae9"
+},'quiz6');
+const _db6 = firebase.database(_fbApp6);
+const _ref6 = _db6.ref('quiz/iAdj');
+
+let state = {};
+let mode = 1;
+let activeCat = '전체';
+let activeStatus = '전체';
+let currentAudio = null;
+
+function loadState(){ try{ state = JSON.parse(localStorage.getItem('iAdj')||'{}'); }catch(e){ state={}; } }
+function saveState(){
+  _ref6.set(state).catch(()=>{});
+  localStorage.setItem('iAdj', JSON.stringify(state));
+  _syncWrong();
+}
+function _syncWrong(){
+  const items = DATA.filter(v => state[v.id] && state[v.id].correct === false && !state[v.id].mastered)
+    .map(v => ({id:v.id, q:v.kr, a:v.jpPlain, r:v.jpPlain}));
+  _db6.ref('wrongAnswers/iAdj').set(items.length ? {appName:'い형용사 퀴즈', emoji:'🈶', items} : null).catch(()=>{});
+}
+
+// ── TTS ──
+function speak(text, btn) {
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  document.querySelectorAll('.tts-btn.playing').forEach(b=>b.classList.remove('playing'));
+  if(btn) btn.classList.add('playing');
+  const url='https://translate.googleapis.com/translate_tts?ie=UTF-8&tl=ja&client=gtx&q='+encodeURIComponent(text);
+  const audio = new Audio(url);
+  currentAudio = audio;
+  audio.playbackRate = 0.9;
+  audio.onended = ()=>{ if(btn) btn.classList.remove('playing'); currentAudio=null; };
+  audio.onerror = ()=>{
+    if(btn) btn.classList.remove('playing');
+    const u = new SpeechSynthesisUtterance(text); u.lang='ja-JP'; u.rate=0.85;
+    speechSynthesis.speak(u);
+  };
+  audio.play().catch(()=>audio.onerror&&audio.onerror());
+}
+
+// ── MODE ──
+function setMode(m) {
+  mode = m;
+  document.getElementById('m1btn').classList.toggle('active', m===1);
+  document.getElementById('m2btn').classList.toggle('active', m===2);
+  render();
+}
+
+// ── FILTER ──
+const cats = ['전체', ...new Set(DATA.map(v=>v.cat))];
+const statuses = ['전체','미답변','틀린것만','맞은것','완료(⭐)'];
+
+function getStatus(v){
+  const s = state[v.id];
+  if(!s) return 'none';
+  if(s.mastered) return 'mastered';
+  if(s.correct === true) return 'correct';
+  if(s.correct === false) return 'wrong';
+  return 'none';
+}
+
+function filteredData(){
+  return SHUFFLED.filter(v => {
+    const catOk = activeCat==='전체' || v.cat===activeCat;
+    const st = getStatus(v);
+    const stOk = activeStatus==='전체' ? true :
+      activeStatus==='미답변' ? st==='none' :
+      activeStatus==='틀린것만' ? st==='wrong' :
+      activeStatus==='맞은것' ? st==='correct' :
+      activeStatus==='완료(⭐)' ? st==='mastered' : true;
+    return catOk && stOk;
+  });
+}
+
+function renderFilters(){
+  const cf = document.getElementById('catFilters');
+  cf.innerHTML = cats.map(c=>`<button class="filter-btn${activeCat===c?' active':''}" onclick="setCat('${c}')">${c}</button>`).join('');
+  const sf = document.getElementById('statusFilters');
+  sf.innerHTML = statuses.map(s=>`<button class="status-btn${activeStatus===s?' active':''}" onclick="setStatus('${s}')">${s}</button>`).join('');
+}
+function setCat(c){ activeCat=c; render(); }
+function setStatus(s){ activeStatus=s; render(); }
+
+function renderStats(){
+  const total = DATA.length;
+  const done = DATA.filter(v=>{const s=state[v.id]; return s&&(s.correct===true||s.mastered);}).length;
+  const wrong = DATA.filter(v=>{const s=state[v.id]; return s&&s.correct===false&&!s.mastered;}).length;
+  const mastered = DATA.filter(v=>state[v.id]&&state[v.id].mastered).length;
+  document.getElementById('progBar').style.width=(done/total*100)+'%';
+  document.getElementById('progLabel').textContent=`${done} / ${total} 완료`;
+  document.getElementById('stats').innerHTML=`<span>전체 <b>${total}</b></span><span>완료 <b>${done}</b></span><span>틀림 <b>${wrong}</b></span><span>⭐ <b>${mastered}</b></span>`;
+}
+
+function renderCards(){
+  const list = filteredData();
+  const el = document.getElementById('cardList');
+  if(!list.length){ el.innerHTML='<div class="empty">해당하는 문항이 없습니다</div>'; return; }
+
+  el.innerHTML = list.map((v, idx) => {
+    const s = state[v.id] || {};
+    const choices = buildChoices(v);
+    const answered = s.correct !== undefined;
+    const statusCls = s.mastered ? ' mastered' : s.correct===true ? ' correct' : s.correct===false ? ' wrong' : '';
+
+    // 질문 HTML
+    const qHtml = mode===1
+      ? `<div class="q-jp">${v.jpDisp} <button class="tts-btn" onclick="speak('${v.jpPlain.replace(/'/g,"\\'")}',this)">🔊</button></div>`
+      : `<div class="q-kr">${v.kr}</div>`;
+
+    // 선택지 HTML
+    const choiceBtns = choices.map(c => {
+      let cls = '';
+      if(answered){
+        if(c.correct) cls='show-correct';
+        else if(!c.correct && s.chosenId===c.id) cls='wrong-ans';
+      }
+      const label = mode===1 ? c.kr : c.jpPlain;
+      return `<button class="choice-btn ${cls}" ${answered?'disabled':''} onclick="answer(${v.id},${c.id},${c.correct})">${label}</button>`;
+    }).join('');
+
+    // 정답 보여주기 (답변 후)
+    const ansHtml = answered ? `<div class="ans-area show">
+      <div class="ans-jp">${v.jpDisp} <button class="tts-btn" onclick="speak('${v.jpPlain.replace(/'/g,"\\'")}',this)">🔊</button></div>
+      <div style="font-size:.82rem;color:#888;margin-top:2px">${v.kr}</div>
+    </div>` : `<div class="ans-area"></div>`;
+
+    return `<div class="card${statusCls}" id="card-${v.id}">
+      <div class="card-header">
+        <span class="card-num">${idx+1}</span>
+        <span class="card-cat">${v.cat}</span>
+        <button class="master-btn" onclick="toggleMaster(${v.id})">${s.mastered?'⭐':'☆'}</button>
+      </div>
+      <div class="q-wrap">${qHtml}</div>
+      <div class="choices" id="choices-${v.id}">${choiceBtns}</div>
+      ${ansHtml}
+    </div>`;
+  }).join('');
+}
+
+function render(){ renderFilters(); renderStats(); renderCards(); }
+
+function answer(id, chosenId, isCorrect){
+  state[id] = { correct: isCorrect, chosenId, mastered: state[id]?.mastered||false };
+  saveState();
+  const card = document.getElementById('card-'+id);
+  if(!card) return;
+  card.classList.remove('correct','wrong');
+  card.classList.add(isCorrect?'correct':'wrong');
+  const choices = buildChoices(DATA.find(x=>x.id===id));
+  card.querySelectorAll('.choice-btn').forEach((b,i)=>{
+    b.disabled=true;
+    const c=choices[i];
+    if(c.correct) b.className='choice-btn show-correct';
+    else if(c.id===chosenId&&!isCorrect) b.className='choice-btn wrong-ans';
+    else b.className='choice-btn';
+  });
+  const ans = card.querySelector('.ans-area');
+  if(ans) ans.classList.add('show');
+  const v = DATA.find(x=>x.id===id);
+  setTimeout(()=>{
+    const btn = card.querySelector('.ans-area .tts-btn');
+    if(btn&&v) speak(v.jpPlain, btn);
+  },300);
+  renderStats();
+}
+
+function toggleMaster(id){
+  if(!state[id]) state[id]={correct:undefined,mastered:false};
+  state[id].mastered = !state[id].mastered;
+  saveState(); render();
+}
+
+function resetAll(){
+  if(!confirm('모든 진행 상태를 초기화할까요?')) return;
+  state={}; saveState(); render();
+}
+
+// ── INIT ──
+loadState(); render();
+_ref6.on('value', snap=>{
+  const d=snap.val();
+  if(d){ state=d; render(); _syncWrong(); }
+},()=>{});
+
+// ── APP STATUS ──
+const _ST_LIST=[{icon:'🫥',label:'시작전'},{icon:'✏️',label:'공부중'},{icon:'💯',label:'공부완료!'}];
+const _stRef6=_db6.ref('appStatus/iAdj');
+let _appSt6={idx:0,date:''};
+_stRef6.on('value',snap=>{const d=snap.val();if(d){_appSt6=d;_updateSt();}});
+function _kstDate(){const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));return`${n.getMonth()+1}/${n.getDate()}`;}
+function _cycleSt(){_appSt6={idx:((_appSt6.idx||0)+1)%3,date:_kstDate()};_stRef6.set(_appSt6);_updateSt();}
+function _updateSt(){const s=_ST_LIST[_appSt6.idx||0];document.getElementById('_stBtn').textContent=`${s.icon} ${s.label}`;document.getElementById('_stDate').textContent=_appSt6.date||'';}
+</script>
+
+<div style="text-align:center;padding:12px">
+  <button onclick="resetAll()" style="border:none;background:#eee;border-radius:20px;padding:8px 20px;font-size:.85rem;color:#666;cursor:pointer">🔄 처음부터</button>
+</div>
+
+<div style="position:fixed;bottom:16px;right:16px;z-index:9999;text-align:center;">
+  <button id="_stBtn" onclick="_cycleSt()" style="border:none;border-radius:20px;padding:8px 14px;font-size:13px;font-weight:700;background:rgba(255,255,255,.95);box-shadow:0 2px 12px rgba(0,0,0,.15);cursor:pointer;white-space:nowrap;">🫥 시작전</button>
+  <div id="_stDate" style="font-size:11px;color:#aaa;margin-top:3px;"></div>
+</div>
+</body>
+</html>
